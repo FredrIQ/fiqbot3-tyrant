@@ -691,7 +691,7 @@ on *:TEXT:*:*:{
   return
 
   :SOURCE
-  %send The source of FIQ-bot can be found here: http://home.fiq.se/fiqbot/src/fiqbot-tyrant/
+  %send The source of FIQ-bot can be found here: https://github.com/FredrIQ/fiqbot3-tyrant
   return
 
   :TYPEOF
