@@ -10,19 +10,6 @@ Totally rewritten
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
 alias urldecode return $replace($regsubex($1-,/%(\w\w)/g,$chr($iif($base(\t,16,10) != 32,$v1,1))),$chr(1),$chr(32))
-alias chanlistglob {
-  scid -at1 chanlistnet
-  var %tmp = $mid(%cl.buffer,2)
-  unset %cl.buffer | return %tmp
-}
-alias chanlistnet {
-  set %cl.buffer $+(%cl.buffer,$chr(44),$network)
-  var %i = 1
-  while ($comchan($me,%i)) {
-    set %cl.buffer $+(%cl.buffer,$chr(44),$v1)
-    inc %i
-  }
-}
 
 ;Helpers
 alias # return $chr(35)
