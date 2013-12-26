@@ -100,7 +100,7 @@ alias -l fiqbot.tyrant.setsocketvars {
   set -u0 %userid %fiqbot_tyrant_userid [ $+ [ %usertarget ] ]
   set -u0 %token %fiqbot_tyrant_token [ $+ [ %usertarget ] ]
   set -u0 %flashcode %fiqbot_tyrant_flashcode [ $+ [ %usertarget ] ]
-  set -u0 %clientcode %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
+  set -u0 %clientcode $hget(socketdata,$+(clientcode,%id))
 
   var %metadata = $hget(socketdata,$+(metadata_,%id))
   var %i = 0
@@ -286,12 +286,12 @@ alias fiqbot.tyrant.runsocket {
   if (%delay == -1) set -u0 %delay 0
 
   var %id = $hget(socketdata,nextid)
+  if (!%usertarget) {
+    %send [API error] No user data found, failed in runsocket for %msg (task: %task $+ )
+    halt
+  }
   if ($1) var %id = $1
   if (!$1) {
-    if (!%usertarget) {
-      %send [API error] No user data found
-      halt
-    }
     hinc socketdata nextid
     hadd socketdata $+(send,%id) %send
     hadd socketdata $+(user,%id) %user
@@ -311,6 +311,7 @@ alias fiqbot.tyrant.runsocket {
       inc %i
     }
   }
+  hadd socketdata $+(clientcode,%id) %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
 
   var %socket = $+(tyranttask,%id)
 
@@ -323,7 +324,7 @@ alias fiqbot.tyrant.runsocket {
     .timer 1 1 fiqbot.tyrant.retrysocket %id needlock
     return
   }
-  if (%bruteforcing [ $+ [ %usertarget ] ]) && (!%bruteforcing) {
+  if (%bruteforcing [ $+ [ %usertarget ] ]) && (!$hget(socketdata,$+(bruteforcing,%id))) {
     .timer 1 1 fiqbot.tyrant.retrysocket %id
     return
   }
@@ -361,7 +362,7 @@ alias fiqbot.tyrant.showonlinestatus {
   set -u0 %metadata1 1
   set -u0 %user $1
   set -u0 %task showonlinestatus
-  
+
   ;Utilizes a bug within Tyrant to bypass proper authentication. This cannot be
   ;abused (anymore) for evil use since the query gives no response if it was
   ;executed correctly. It does allow you to check other's online status due to
@@ -430,6 +431,10 @@ alias fiqbot.tyrant.startraid {
 
 on *:sockopen:tyranttask*:{
   fiqbot.tyrant.setsocketvars $sockname
+  if (!%usertarget) {
+    %send [API error] No user data found, failed in sockopen for %msg (task: %task $+ )
+    halt
+  }
   if ($sockerr > 0) {
     if (%task == getkongid) var %msg = getKongregateData
     %send [API error] Error loading %msg (Unable to open connection)
@@ -539,21 +544,28 @@ on *:sockread:tyranttask*:{
     hadd socketdata $+(headers_completed,%sockid) %headers_completed
 
     if ($left(%temp,21) == {"duplicate_client":1) && (!%noreidentify) {
-      if (!%bruteforcing) {
+      var %clientcode = %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
+      if (!%bruteforcing [ $+ [ %usertarget ] ]) {
         %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] = 0
         %bruteforcing [ $+ [ %usertarget ] ] = $true
         hadd socketdata $+(bruteforcing,%sockid) 1
+        set -u0 %bruteforcing 1
       }
-      inc %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
       hdel socketdata $+(temp,%sockid)
       hdel socketdata $+(headers_completed,%sockid)
       sockclose $sockname
-      set -u0 %bruteforcing 1
+      if (!%bruteforcing) {
+        .timer 1 1 fiqbot.tyrant.retrysocket %sockid
+        return
+      }
+      inc %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
+      if (%forcedcode [ $+ [ %usertarget ] ]) %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] = %clientcode
       fiqbot.tyrant.runsocket %sockid
       return
     }
     elseif (%bruteforcing) {
       unset %bruteforcing [ $+ [ %usertarget ] ]
+      set -u5 %forcedcode [ $+ [ %usertarget ] ] 1
       hdel socketdata $+(bruteforcing,%sockid)
     }
     if ((!%headers_completed) || (!$sockbr)) goto done
