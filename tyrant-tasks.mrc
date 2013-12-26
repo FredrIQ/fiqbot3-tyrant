@@ -361,6 +361,11 @@ alias fiqbot.tyrant.showonlinestatus {
   set -u0 %metadata1 1
   set -u0 %user $1
   set -u0 %task showonlinestatus
+  
+  ;Utilizes a bug within Tyrant to bypass proper authentication. This cannot be
+  ;abused (anymore) for evil use since the query gives no response if it was
+  ;executed correctly. It does allow you to check other's online status due to
+  ;clientcode identification, though.
   set -u0 %msg initProfile
   set -u0 %params user_id=
   set -u0 %noclientcode 1
