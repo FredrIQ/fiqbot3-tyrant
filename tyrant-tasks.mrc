@@ -93,6 +93,9 @@ alias -l fiqbot.tyrant.setsocketvars {
   set -u0 %tempold $hget(socketdata,$+(tempold,%id))
   set -u0 %access $hget(socketdata,$+(access,%id))
   set -u0 %delay $hget(socketdata,$+(delay,%id))
+  set -u0 %bruteforcing $hget(socketdata,$+(bruteforcing,%id))
+  set -u0 %noreidentify $hget(socketdata,$+(noreidentify,%id))
+  set -u0 %noclientcode $hget(socketdata,$+(noclientcode,%id))
   set -u0 %usertarget $hget(socketdata,$+(usertarget,%id))
   set -u0 %userid %fiqbot_tyrant_userid [ $+ [ %usertarget ] ]
   set -u0 %token %fiqbot_tyrant_token [ $+ [ %usertarget ] ]
@@ -177,6 +180,7 @@ alias fiqbot.tyrant.apiraw {
   set -u0 %task raw
   set -u0 %msg $1
   set -u0 %params $2-
+  set -u0 %noreidentify 1
   fiqbot.tyrant.runsocket
 }
 alias fiqbot.tyrant.apiraw2 {
@@ -282,8 +286,8 @@ alias fiqbot.tyrant.runsocket {
   if (%delay == -1) set -u0 %delay 0
 
   var %id = $hget(socketdata,nextid)
-  if ($1) && (%task != runbruteforce) var %id = $1
-  if (!$1) || (%task == runbruteforce) {
+  if ($1) var %id = $1
+  if (!$1) {
     if (!%usertarget) {
       %send [API error] No user data found
       halt
@@ -297,6 +301,9 @@ alias fiqbot.tyrant.runsocket {
     hadd socketdata $+(access,%id) %access
     hadd socketdata $+(delay,%id) %delay
     hadd socketdata $+(usertarget,%id) %usertarget
+    hadd socketdata $+(bruteforcing,%id) %bruteforcing
+    hadd socketdata $+(noreidentify,%id) %noreidentify
+    hadd socketdata $+(noclientcode,%id) %noclientcode
     var %i = 1
     while (%metadata [ $+ [ %i ] ]) {
       hadd socketdata $+(metadata_,%id) %i
@@ -316,7 +323,7 @@ alias fiqbot.tyrant.runsocket {
     .timer 1 1 fiqbot.tyrant.retrysocket %id needlock
     return
   }
-  if (%oldid [ $+ [ %usertarget ] ]) && (%task != runbruteforce) {
+  if (%bruteforcing [ $+ [ %usertarget ] ]) && (!%bruteforcing) {
     .timer 1 1 fiqbot.tyrant.retrysocket %id
     return
   }
@@ -354,13 +361,10 @@ alias fiqbot.tyrant.showonlinestatus {
   set -u0 %metadata1 1
   set -u0 %user $1
   set -u0 %task showonlinestatus
-  
-  ;Utilizes a bug within Tyrant to bypass proper authentication. This cannot be
-  ;abused (anymore) for evil use since the query gives no response if it was
-  ;executed correctly. It does allow you to check other's online status due to
-  ;clientcode identification, though.
   set -u0 %msg initProfile
   set -u0 %params user_id=
+  set -u0 %noclientcode 1
+  set -u0 %noreidentify 1
   fiqbot.tyrant.runkongsocket
 }
 alias fiqbot.tyrant.showownedcards {
@@ -436,11 +440,6 @@ on *:sockopen:tyranttask*:{
   }
 
   var %time, %hash
-  if (%task == runbruteforce) && (!%oldid [ $+ [ %usertarget ] ]) {
-    hdel socketdata $+(temp,%sockid)
-    sockclose $sockname
-    return
-  }
   %ctime = $ctime
   %time = %ctime
   %time = %time / 900
@@ -453,7 +452,7 @@ on *:sockopen:tyranttask*:{
     &version= $+ $fiqbot.tyrant.version $+ $&
     &hash= $+ %hash $+ $&
     &ccache= $+ $null $+ $&
-    $iif(%task != runbruteforce,&client_code= $+ %clientcode) $+ $&
+    $iif(!%noclientcode,&client_code= $+ %clientcode) $+ $&
     &game_auth_token= $+ %token $+ $&
     &rc=2
 
@@ -534,44 +533,23 @@ on *:sockread:tyranttask*:{
     hadd socketdata $+(temp,%sockid) %temp
     hadd socketdata $+(headers_completed,%sockid) %headers_completed
 
-    if ($left(%temp,21) == {"duplicate_client":1) && (%task != raw) && (%task != showonlinestatus) {
-      if (%task != runbruteforce) {
+    if ($left(%temp,21) == {"duplicate_client":1) && (!%noreidentify) {
+      if (!%bruteforcing) {
         %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] = 0
-        set %oldid [ $+ [ %usertarget ] ] %sockid
-        set -u0 %task runbruteforce
-        set -u0 %msg getTime
-
-        var %clientcode = 0
-        while (%clientcode < 1000) {
-          inc %clientcode
-          set -u0 %params client_code= $+ %clientcode
-          fiqbot.tyrant.runsocket %clientcode
-        }
-        hdel socketdata $+(temp,%sockid)
-        sockclose $sockname
+        %bruteforcing [ $+ [ %usertarget ] ] = $true
+        hadd socketdata $+(bruteforcing,%sockid) 1
       }
-      else {
-        hdel socketdata $+(temp,%sockid)
-        sockclose $sockname
-      }
+      inc %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
+      hdel socketdata $+(temp,%sockid)
+      hdel socketdata $+(headers_completed,%sockid)
+      sockclose $sockname
+      set -u0 %bruteforcing 1
+      fiqbot.tyrant.runsocket %sockid
       return
     }
-    elseif (%task == runbruteforce) {
-      set -u0 %clientcode $gettok(%params,2,61)
-      set %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] %clientcode
-      unset %task
-
-      set -u0 %old_sockid %oldid [ $+ [ %usertarget ] ]
-      unset %headers_completed
-      unset %temp
-      hdel socketdata $+(headers_completed,%old_sockid)
-
-      .timer 1 0 fiqbot.tyrant.runsocket %oldid [ $+ [ %usertarget ] ]
-      unset %oldid [ $+ [ %usertarget ] ]
-
-      hdel socketdata $+(temp,%sockid)
-      sockclose $sockname
-      return
+    elseif (%bruteforcing) {
+      unset %bruteforcing [ $+ [ %usertarget ] ]
+      hdel socketdata $+(bruteforcing,%sockid)
     }
     if ((!%headers_completed) || (!$sockbr)) goto done
     if (!%task) goto done
@@ -976,7 +954,6 @@ on *:sockread:tyranttask*:{
       }
       if (%task == showwars) %send %id :: $+(%friend,-,%opponent) :: $+(%atk,-,%def) ( $+ %diff $+ ) :: %end
       elseif (!$hget(wars,%id)) {
-        echo -s [WAR ANNOUNCER DEBUG] %temp
         var %buffer, %nick
         var %i = 0
         while ((%noalert_settings != highlights) && (%i < $nick(%chan,0))) {
@@ -1072,10 +1049,6 @@ on *:sockclose:tyranttask*:{
   }
   else {
     %buffer = %buffer :: Not in a faction
-    echo -s [DEBUG] No faction found :: $&
-      Your access level: $iif(%access,%access,???) :: $&
-      Line $+($calc(%headers_completed - 1),: $left(%tempold,100),...) :: $&
-      Line $+(%headers_completed,: $left(%temp,100),...)
   }
   %buffer = %buffer :: Arena: %p_elo elo, %p_arena points :: Tournament rating: %p_tournament $+ , $+(%p_wins,/,%p_losses) W/L
   var %updated = (never)
