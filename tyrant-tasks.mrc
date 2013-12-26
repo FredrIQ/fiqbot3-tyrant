@@ -286,12 +286,12 @@ alias fiqbot.tyrant.runsocket {
   if (%delay == -1) set -u0 %delay 0
 
   var %id = $hget(socketdata,nextid)
-  if (!%usertarget) {
-    %send [API error] No user data found, failed in runsocket for %msg (task: %task $+ )
-    halt
-  }
   if ($1) var %id = $1
   if (!$1) {
+    if (!%usertarget) {
+      %send [API error] No user data found, failed in runsocket for %msg (task: %task $+ )
+      halt
+    }
     hinc socketdata nextid
     hadd socketdata $+(send,%id) %send
     hadd socketdata $+(user,%id) %user
