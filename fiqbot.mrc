@@ -781,7 +781,7 @@ on *:TEXT:*:*:{
   if (%set == 5) %set = Homeworld
   if (%set == 6) %set = Phobos
   if (%set == 7) %set = Phobos Aftermath
-  if (%set == 8) %set = Awkening
+  if (%set == 8) %set = Awakening
   if (%set == 9) %set = Terminus
   if (%set == 10) %set = Occupation
   if (%set == 11) %set = Worldship
