@@ -641,7 +641,8 @@ on *:sockread:tyranttask*:{
     if (%headers_completed == 1) %send %temp
     goto done
     :CHECKCONQUESTMAP
-    var %id, %x, %y, %owner_id, %owner_name, %attacker_id, %attacker_name, %attacker_start, %attacker_end, %cr, %protection_end, %bg, %atk_check, %bg_check, %id_check
+    var %id, %x, %y, %owner_id, %owner_name, %attacker_id, %attacker_name, %attacker_start, %attacker_end, %cr, %protection_end, %bg
+    var %atk_check, %bg_check, %id_check
     var %cqinfo = msg $fiqbot.tyrant.trackerchannel [CONQUEST]
     %temp = %tempold $+ %temp
     tokenize 44 %temp
@@ -676,26 +677,51 @@ on *:sockread:tyranttask*:{
       }
       %x = $noqt($gettok($2,2,58))
       %y = $noqt($gettok($3,2,58))
+      %cr = $noqt($gettok($7,2,58))
       %owner_id = $noqt($gettok($4,2,58))
       %owner_name = $noqt($gettok($11,2,58))
-      %attacker_id = $noqt($gettok($13,2,58))
-      %attacker_name = $noqt($gettok($14,2,58))
-      %attacker_start = $noqt($gettok($15,2,58))
-      %attacker_end = $noqt($remove($gettok($16,2,58),$chr(125)))
-      %cr = $noqt($gettok($7,2,58))
       %protection_end = $noqt($gettok($12,2,58))
-      %bg = $noqt($remove($gettok($17,2,58),$chr(125)))
 
-      %atk_check = $noqt($gettok($14,1,58))
-      %bg_check = $noqt($gettok($17,1,58))
+      /*
+      default JSON is:
+      13 - attacker_id
+      14 - attacker_name
+      15 - attacker_end
+      16 - attacker_start
+      17 - bg
+
+      if owner is AI, owner_name is missing (shifting everything past it by 1)
+      if none is attacking, attacker_* (besides ID) is missing, shift bg by 3
+      */
+
+      var %13 = 13, %14 = 14, %15 = 15, %16 = 16, %17 = 17
+
+      if (%owner_id == null) {
+        dec %13
+        dec %14
+        dec %15
+        dec %16
+        dec %17
+        %owner_id = 0
+        %owner_name = $null
+        %protection_end = 0
+      }
+      %attacker_id = $noqt($gettok($ [ $+ [ %13 ] ],2,58))
+      %attacker_name = $noqt($gettok($ [ $+ [ %14 ] ],2,58))
+      %attacker_start = $noqt($gettok($ [ $+ [ %16 ] ],2,58))
+      %attacker_end = $noqt($remove($gettok($ [ $+ [ %15 ] ],2,58),$chr(125)))
+      %bg = $noqt($remove($gettok($ [ $+ [ %17 ] ],2,58),$chr(125)))
+
+      %atk_check = $noqt($gettok($ [ $+ [ %14 ] ],1,58))
+      %bg_check = $noqt($gettok($ [ $+ [ %17 ] ],1,58))
       if (%atk_check != attacking_faction_name) {
         dec %counter 3
         %attacker_id = 0
         %attacker_name = $null
         %attacker_start = 0
         %attacker_end = 0
-        %bg = $noqt($remove($gettok($14,2,58),$chr(125)))
-        %bg_check = $noqt($gettok($14,1,58))
+        %bg = $noqt($remove($gettok($ [ $+ [ %14 ] ],2,58),$chr(125)))
+        %bg_check = $noqt($gettok($ [ $+ [ %14 ] ],1,58))
       }
       if (%bg_check != effect) {
         dec %counter
@@ -778,8 +804,7 @@ on *:sockread:tyranttask*:{
 
       tokenize 44 %temp
       var %temp_fix = $right(%temp,- $+ $len($1- [ $+ [ %counter ] ]))
-      if ($left(%temp_fix,1) != $chr(125)) tokenize 44 %temp_fix
-      else tokenize 44 $right(%temp_fix,-1)
+      tokenize 44 %temp_fix
     }
     tokenize 44 %temp
     var %temp_add = $right(%temp,- $+ $calc($len($1- [ $+ [ %counter ] ]) + 1))
