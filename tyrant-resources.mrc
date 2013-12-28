@@ -113,7 +113,12 @@ on *:SOCKREAD:tyrantcards:{
     if (</unit> isin %temp) {
       %unit = $false
       %hidden = 0
-      if (!$hget(cards,$+(id,$remove(%name,$chr(32))))) hadd cards $+(id,$remove(%name,$chr(32))) %id
+      if (!$hget(cards,$+(id,$remove(%name,$chr(32))))) {
+        hadd cards $+(id,$remove(%name,$chr(32))) %id
+      }
+      if (, isin %name) && (!$hget(cards,$+(id,$remove(%name,$chr(32),$chr(44))))) {
+        hadd cards $+(id,$remove(%name,$chr(32),$chr(44))) %id
+      }
       %id = 0
       %skillid = 0
     }
@@ -166,9 +171,15 @@ on *:SOCKREAD:tyrantcards:{
         if (!%hidden) {
           if (%set == 5002) {
             hadd cards $+(id,$remove(%name,$chr(32)),+) %id
+            if (, isin %name) {
+              hadd cards $+(id,$remove(%name,$chr(32),$chr(44)),+) %id
+            }
           }
           else {
             hadd cards $+(id,$remove(%name,$chr(32))) %id
+            if (, isin %name) {
+              hadd cards $+(id,$remove(%name,$chr(32),$chr(44))) %id
+            }
           }
         }
       }
@@ -228,7 +239,6 @@ on *:SOCKREAD:tyrantraids:{
   var %ignore, %raid, %reward, %id, %name, %players, %time, %health
   while ($true) {
     sockread %temp
-    echo -s debugraid: %temp
     if (<!-- isin %temp) {
       %ignore = $true
     }

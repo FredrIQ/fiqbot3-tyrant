@@ -16,6 +16,7 @@ alias fiqbot.tyrant.init {
     %hload factions
     %hload userdata
     %hload wars
+    %hload conquest
     return
   }
   if (!$hget(users)) hmake users 1000
@@ -24,11 +25,13 @@ alias fiqbot.tyrant.init {
     hadd factions nextid 1
   }
   if (!$hget(wars)) hmake wars 10
+  if (!$hget(conquest)) hmake conquest 1000
 }
 
 ;Helpers
 alias fiqbot.tyrant.version return 2.17.09
 alias fiqbot.tyrant.directory return $+($scriptdir,tyrant\)
+alias fiqbot.tyrant.trackerchannel return #botfarm
 alias fiqbot.tyrant.factionid return %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
 alias fiqbot.tyrant.factionname return %fiqbot_tyrant_fname [ $+ [ %usertarget ] ]
 alias fiqbot.tyrant.factionfp return %fiqbot_tyrant_fp [ $+ [ %usertarget ] ]
@@ -44,6 +47,17 @@ alias fiqbot.tyrant.account {
   var %usertarget = %fiqbot_tyrant_factionchannel_ [ $+ [ $1 ] ]
   if (!%usertarget) return 0
   return %fiqbot_tyrant_userid [ $+ [ %usertarget ] ]
+}
+alias fiqbot.tyrant.cqcoordinates {
+  var %x = $1, %y = $2
+  var %buffer, %x_result, %y_result
+  %x_result = %x
+  if (%x) %x_result = $+(%x_result,E)
+  %y_result = %y
+  if (%y) %y_result = $+(%y_result,S)
+  if (%x < 0) %x_result = $+($calc(%x * -1),W)
+  if (%y < 0) %y_result = $+($calc(%y * -1),N)
+  return $+(%x_result,$chr(44),%y_result)
 }
 alias fiqbot.tyrant.freelock {
   unset %fiqbot_tyrant_socklock
@@ -119,7 +133,7 @@ alias fiqbot.tyrant.hload {
   }
   var %dir = $+($fiqbot.tyrant.directory,tables\)
   var %file = $+(%dir,$1,.fht)
-  !hload -i $1 %file $1
+  if ($exists(%file)) !hload -i $1 %file $1
 }
 alias fiqbot.tyrant.hsave {
   if (!$hget($1)) return
@@ -133,12 +147,14 @@ alias fiqbot.tyrant.runinterval {
   inc %interval 1
   fiqbot.tyrant.checkvault
   fiqbot.tyrant.updatefactioninfo
+  fiqbot.tyrant.checkconquestmap
   if (!$calc(%interval % 20)) {
     var %hsave = fiqbot.tyrant.hsave
     %hsave users
     %hsave factions
     %hsave userdata
     %hsave wars
+    %hsave conquest
     %hsave cards
     %hsave raids
 
@@ -187,6 +203,12 @@ alias fiqbot.tyrant.apiraw2 {
   set -u0 %task raw2
   set -u0 %msg $1
   set -u0 %params $2-
+  fiqbot.tyrant.runsocket
+}
+alias fiqbot.tyrant.checkconquestmap {
+  set -u0 %task checkconquestmap
+  set -u0 %msg getConquestMap
+  set -u0 %metadata1 2
   fiqbot.tyrant.runsocket
 }
 alias fiqbot.tyrant.checktargets {
@@ -618,6 +640,152 @@ on *:sockread:tyranttask*:{
     }
     if (%headers_completed == 1) %send %temp
     goto done
+    :CHECKCONQUESTMAP
+    var %id, %x, %y, %owner_id, %owner_name, %attacker_id, %attacker_name, %attacker_start, %attacker_end, %cr, %protection_end, %bg, %atk_check, %bg_check, %id_check
+    var %cqinfo = msg $fiqbot.tyrant.trackerchannel [CONQUEST]
+    %temp = %tempold $+ %temp
+    tokenize 44 %temp
+    %counter = 0
+    %first = %metadata1
+    while ($18) {
+      inc %counter 17
+      if (%first) {
+        if (%first == 2) {
+          dec %first
+          %counter = 1
+          tokenize 44 %temp
+          tokenize 44 $right(%temp,- $+ $len($1- [ $+ [ %counter ] ]))
+          continue
+        }
+        %id = $noqt($gettok($1,4,58))
+        %id_check = $noqt($remove($gettok($1,3,58),$chr(91),$chr(123)))
+      }
+      else {
+        %id = $noqt($gettok($1,2,58))
+        %id_check = $noqt($remove($gettok($1,1,58),$chr(91),$chr(123)))
+      }
+      if (%first) {
+        %first = 0
+        hadd socketdata $+(metadata1_,%sockid) 0
+        set -u0 %metadata1 0
+      }
+      elseif (%id_check != system_id) {
+        tokenize 44 %temp
+        tokenize 44 $right(%temp,- $+ $len($1- [ $+ [ %counter ] ]))
+        continue
+      }
+      %x = $noqt($gettok($2,2,58))
+      %y = $noqt($gettok($3,2,58))
+      %owner_id = $noqt($gettok($4,2,58))
+      %owner_name = $noqt($gettok($11,2,58))
+      %attacker_id = $noqt($gettok($13,2,58))
+      %attacker_name = $noqt($gettok($14,2,58))
+      %attacker_start = $noqt($gettok($15,2,58))
+      %attacker_end = $noqt($remove($gettok($16,2,58),$chr(125)))
+      %cr = $noqt($gettok($7,2,58))
+      %protection_end = $noqt($gettok($12,2,58))
+      %bg = $noqt($remove($gettok($17,2,58),$chr(125)))
+
+      %atk_check = $noqt($gettok($14,1,58))
+      %bg_check = $noqt($gettok($17,1,58))
+      if (%atk_check != attacking_faction_name) {
+        dec %counter 3
+        %attacker_id = 0
+        %attacker_name = $null
+        %attacker_start = 0
+        %attacker_end = 0
+        %bg = $noqt($remove($gettok($14,2,58),$chr(125)))
+        %bg_check = $noqt($gettok($14,1,58))
+      }
+      if (%bg_check != effect) {
+        dec %counter
+        %bg = 0
+      }
+
+      if ($hget(conquest,$+(x,%id))) {
+        var %h.owner = $hget(conquest,$+(owner_id,%id))
+        var %h.ownername = $hget(conquest,$+(owner_name,%id))
+        var %h.attacker = $hget(conquest,$+(attacker_id,%id))
+        var %h.attackername = $hget(conquest,$+(attacker_name,%id))
+        var %fc.owner = %fiqbot_tyrant_factionchannel_ [ $+ [ %fiqbot_tyrant_faccount [ $+ [ %h.owner ] ] ] ]
+        var %fc.newowner = %fiqbot_tyrant_factionchannel_ [ $+ [ %fiqbot_tyrant_faccount [ $+ [ %owner_id ] ] ] ]
+        var %fc.attacker = %fiqbot_tyrant_factionchannel_ [ $+ [ %fiqbot_tyrant_faccount [ $+ [ %h.attacker ] ] ] ]
+        var %fc.newattacker = %fiqbot_tyrant_factionchannel_ [ $+ [ %fiqbot_tyrant_faccount [ $+ [ %attacker_id ] ] ] ]
+
+        if (%owner_id != %h.owner) {
+          if (%owner_id) {
+            %cqinfo %owner_name successfully conquered $fiqbot.tyrant.cqcoordinates(%x,%y) $+ , previously owned by $iif(%h.ownername,%h.ownername,AI)
+            if (%fc.owner) {
+              msg %fc.owner [CONQUEST] Lost $fiqbot.tyrant.cqcoordinates(%x,%y) to %owner_name
+            }
+            if (%fc.newowner) {
+              msg %fc.newowner [CONQUEST] Successfully conquered $fiqbot.tyrant.cqcoordinates(%x,%y) from $iif(%h.ownername,%h.ownername,AI)
+            }
+          }
+          else {
+            %cqinfo %h.ownername abandoned $fiqbot.tyrant.cqcoordinates(%x,%y)
+            if (%fc.owner) {
+              msg %fc.owner [CONQUEST] Abandoned $fiqbot.tyrant.cqcoordinates(%x,%y)
+            }
+          }
+          hadd conquest $+(protection_end,%id) %protection_end
+          hadd conquest $+(owner_id,%id) %owner_id
+          hadd conquest $+(owner_name,%id) %owner_name
+        }
+        if (%attacker_id != %h.attacker) {
+          if (%attacker_id) {
+            %cqinfo %attacker_name is invading $fiqbot.tyrant.cqcoordinates(%x,%y) $+ , owned by $iif(%owner_name,%owner_name,AI)
+            if (%fc.newowner) {
+              msg %fc.newowner [CONQUEST] Defending $fiqbot.tyrant.cqcoordinates(%x,%y) against %attacker_name
+            }
+            if (%fc.newattacker) {
+              msg %fc.newattacker [CONQUEST] Attacking $fiqbot.tyrant.cqcoordinates(%x,%y) owned by $iif(%owner_name,%owner_name,AI)
+            }
+          }
+          if (%h.attacker != %owner_id) && (%h.attacker) {
+            %cqinfo %h.attackername failed to conquer $fiqbot.tyrant.cqcoordinates(%x,%y) $+ , owned by $iif(%owner_name,%owner_name,AI)
+            if (%fc.newowner) {
+              msg %fc.newowner [CONQUEST] Successfully defended $fiqbot.tyrant.cqcoordinates(%x,%y) against %h.attackername
+            }
+            if (%fc.attacker) {
+              msg %fc.attacker [CONQUEST] Failed to conquer $fiqbot.tyrant.cqcoordinates(%x,%y) from %h.ownername
+            }
+          }
+          hadd conquest $+(attacker_id,%id) %attacker_id
+          hadd conquest $+(attacker_name,%id) %attacker_name
+          hadd conquest $+(attacker_start,%id) %attacker_start
+          hadd conquest $+(attacker_end,%id) %attacker_end
+        }
+      }
+
+      if (!$hget(conquest,$+(x,%id))) {
+        hadd conquest $+(x,%id) %x
+        hadd conquest $+(y,%id) %y
+        hadd conquest $+(cr,%id) %cr
+        hadd conquest $+(bg,%id) %bg
+      }
+
+      if (%owner_id) {
+        hadd factions $+(name,%owner_id) %owner_name
+        var %trim_name = $remove(%owner_name,$chr(32))
+        if (!$hget(factions,$+(id,%trim_name))) hadd factions $+(id,%trim_name) %owner_id
+      }
+      if (%attacker_id) {
+        hadd factions $+(name,%attacker_id) %attacker_name
+        var %trim_name = $remove(%attacker_name,$chr(32))
+        if (!$hget(factions,$+(id,%trim_name))) hadd factions $+(id,%trim_name) %attacker_id
+      }
+
+      tokenize 44 %temp
+      var %temp_fix = $right(%temp,- $+ $len($1- [ $+ [ %counter ] ]))
+      if ($left(%temp_fix,1) != $chr(125)) tokenize 44 %temp_fix
+      else tokenize 44 $right(%temp_fix,-1)
+    }
+    tokenize 44 %temp
+    var %temp_add = $right(%temp,- $+ $calc($len($1- [ $+ [ %counter ] ]) + 1))
+    %temp = %temp_add
+    hadd socketdata $+(temp,%sockid) %temp
+    goto done
     :CHECKTARGETS
     var %id, %name, %fp, %infamy, %nerf, %targetcounter, %pointer
     if ($left(%temp,11) != {"rivals":[) continue
@@ -826,7 +994,8 @@ on *:sockread:tyranttask*:{
     :SHOWVAULT
     var %id, %name, %end, %buffer, %first
     tokenize 44 %temp
-    %end = $fiqbot.tyrant.duration($calc($noqt($gettok($20,2,58)) + 3600 * 3 - %ctime)) left
+    var %vaultend = $noqt($gettok($20,2,58))
+    %end = $fiqbot.tyrant.duration($calc(%vaultend + 3600 * 3 - %ctime)) left
     %first = $true
     var %i = 0
     while (%i < 8) {
@@ -852,6 +1021,10 @@ on *:sockread:tyranttask*:{
         %send Cards: %buffer :: %end
       }
       else {
+        if (%vaultend != %fiqbot_tyrant_vaultend) {
+          msg $fiqbot.tyrant.trackerchannel [VAULT] New cards: %buffer :: %end
+          %fiqbot_tyrant_vaultend = %vaultend
+        }
         var %i = 0
         while (%i < $var(fiqbot_tyrant_vaultalert_*,0)) {
           inc %i
@@ -1083,6 +1256,7 @@ on *:sockclose:tyranttask*:{
   }
 
   ;unused labels
+  :CHECKCONQUESTMAP
   :CHECKTARGETS
   :CHECKVAULT
   :CHECKWARS

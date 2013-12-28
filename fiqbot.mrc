@@ -173,6 +173,7 @@ alias initcmd {
   set %fiqbot_cmd_apiraw 11:<query> [parameters]:Performs a manual API query and returns the JSON response. Parameters require &parameter=foo syntax.
   set %fiqbot_cmd_card 1:<name or ID>:Gives information about a card.
   set %fiqbot_cmd_clientcode 11:[new code]:Displays or set the assigned client code. If no code is set, or the code turns out to be incorrect, FIQ-bot will force a new code on a query by running "init".
+  set %fiqbot_cmd_conquestdebug 11:(nothing):Conquest debug log (output in status window)
   set %fiqbot_cmd_faction 1:[-l] <name or ID>:Displays some information about the faction.
   set %fiqbot_cmd_factionchannel 11:[#channel] [internal account ID|reset]:Shows, changes or removes a faction's account assign used.
   set %fiqbot_cmd_getid 1:<nick>:Displays user ID for specified nick.
@@ -822,6 +823,11 @@ on *:TEXT:*:*:{
   %send Clientcode set to %fiqbot_tyrant_clientcode1
   return
 
+  :CONQUESTDEBUG
+  fiqbot.tyrant.login 1
+  fiqbot.tyrant.checkconquestmap
+  return
+
   :FACTION
   if (!$3) { fiqbot.usage $2 $chan | return }
   if ($3 == -l) {
@@ -1138,8 +1144,6 @@ on *:TEXT:*:*:{
 
   :ISON
   if (!$3) { fiqbot.usage $2 $chan | return }
-  
-  ;this prevents ison from working correctly @ account 1
   fiqbot.tyrant.login 1
   fiqbot.tyrant.showonlinestatus $3
   return
@@ -1296,6 +1300,7 @@ on *:TEXT:*:*:{
   :SETFACTION
   if (!$6) { fiqbot.usage $2 $chan | return }
   var %1 = $int($3)
+  set %fiqbot_tyrant_faccount [ $+ [ $4 ] ] %1
   set %fiqbot_tyrant_fid [ $+ [ %1 ] ] $4
   set %fiqbot_tyrant_fp [ $+ [ %1 ] ] $5
   set %fiqbot_tyrant_fname [ $+ [ %1 ] ] $6-
@@ -1518,105 +1523,101 @@ on *:TEXT:*:*:{
     return
   }
 
-  if ($3 == reset) {
-    if (%query) {
-      %send This command doesn't work in query.
-      return
-    }
-    unset %fiqbot_tyrant_vaultalert_ [ $+ [ $chan ] ]
-    %send Vault alerts has been reset.
-    return
-  }
-  elseif ($3 == current) {
-    if (%query) {
-      %send This command doesn't work in query.
-      return
-    }
-    tokenize 32 %fiqbot_tyrant_vaultalert_ [ $+ [ $chan ] ]
-    var %buffer
-    var %i = 0
-    while (%i < $0) {
-      inc %i
-      var %name = $hget(cards,$+(name,$ [ $+ [ %i ] ]))
-      %buffer = %buffer $+ , %name
-    }
-    %buffer = $right(%buffer,-2)
-    %send Current vault alerts: $iif(%buffer,%buffer,(none))
+  if (%query) {
+    %send This command doesn't work in query.
     return
   }
 
-  var %list = $3-
-  tokenize 44 $3-
-  var %buffer, %card, %realname, %name, %id, %set, %rarity
-  %card = $false
-  var %i = 0
-  var %j, %foundcard
-  var %converted
-  while (%i < $0) {
-    inc %i
-    %foundcard = $false
-    %j = $0
-    while ((!%foundcard) && (%j >= %i)) {
-      %realname = $gettok(%list,$+(%i,-,%j),44)
-      if ($numtok(%realname,35) > 2) {
-        dec %j
-        continue
-      }
-      %name = $replace($remove(%realname,$chr(32)),*,+)
-      %id = $hget(cards,$+(id,%name))
-      if (!%id) {
-        if (*[*] iswm %name) && ($chr(44) !isin %name) {
-          %name = $+(a,%name)
-          %name = $left($gettok(%name,2,91),-1)
-        }
-        if (!$hget(cards,$+(name,%name))) {
+  var %buffer
+  if ($3 == reset) {
+    unset %fiqbot_tyrant_vaultalert_ [ $+ [ $chan ] ]
+    %buffer = Vault alert settings has been set.
+  }
+  elseif ($3 != current) {
+    var %list = $3-
+    tokenize 44 $3-
+    var %buffer, %card, %realname, %name, %id, %set, %rarity
+    %card = $false
+    var %i = 0
+    var %j, %foundcard
+    var %converted
+    while (%i < $0) {
+      inc %i
+      %foundcard = $false
+      %j = $0
+      while ((!%foundcard) && (%j >= %i)) {
+        %realname = $gettok(%list,$+(%i,-,%j),44)
+        if ($numtok(%realname,35) > 2) {
           dec %j
           continue
         }
-        if (!%converted) %converted = $+([,%name,])
-        else %converted = $+(%converted $+ $chr(44) $+ $chr(32)) $+([,%name,])
-        %name = $hget(cards,$+(name,%name))
-        %converted = $+(%converted,->,%name)
-        %name = $remove(%name,$chr(32))
-        %name = $replace(%name,*,+)
+        %name = $replace($remove(%realname,$chr(32)),*,+)
         %id = $hget(cards,$+(id,%name))
+        if (!%id) {
+          if (*[*] iswm %name) && ($chr(44) !isin %name) {
+            %name = $+(a,%name)
+            %name = $left($gettok(%name,2,91),-1)
+          }
+          if (!$hget(cards,$+(name,%name))) {
+            dec %j
+            continue
+          }
+          if (!%converted) %converted = $+([,%name,])
+          else %converted = $+(%converted $+ $chr(44) $+ $chr(32)) $+([,%name,])
+          %name = $hget(cards,$+(name,%name))
+          %converted = $+(%converted,->,%name)
+          %name = $remove(%name,$chr(32))
+          %name = $replace(%name,*,+)
+          %id = $hget(cards,$+(id,%name))
+        }
+        %realname = $hget(cards,$+(name,%id))
+        %foundcard = $true
       }
-      %realname = $hget(cards,$+(name,%id))
-      %foundcard = $true
+      if (!%foundcard) {
+        %send Invalid card: %realname
+        return
+      }
+      else {
+        %rarity = $hget(cards,$+(rarity,%id))
+        if (%rarity != 3) {
+          %send %realname is not a Rare.
+          return
+        }
+        %set = $hget(cards,$+(set,%id))
+        if ((%set != 1000) && ((%set > 11) || (%set < 1))) {
+          %send %realname is part of a set which doesn't show up in the vault.
+          return
+        }
+        %card = $true
+        %buffer = %buffer %id
+      }
+      %i = %j
+      %card = $true
     }
-    if (!%foundcard) {
-      %send Invalid card: %realname
-      return
+    if (%converted) {
+      %send Converted: %converted
+    }
+    if (%buffer) {
+      set %fiqbot_tyrant_vaultalert_ [ $+ [ $chan ] ] %buffer
+      %buffer = Vault alert settings has been set.
     }
     else {
-      %rarity = $hget(cards,$+(rarity,%id))
-      if (%rarity != 3) {
-        %send %realname is not a Rare.
-        return
-      }
-      %set = $hget(cards,$+(set,%id))
-      if ((%set != 1000) && ((%set > 11) || (%set < 1))) {
-        %send %realname is part of a set which doesn't show up in the vault.
-        return
-      }
-      %card = $true
-      %buffer = %buffer %id
-    }
-    %i = %j
-    %card = $true
-  }
-  if (%converted) {
-    %send Converted: %converted
-  }
-  if (%buffer) {
-    if (%query) {
-      %send You can only set vault alerts for channels.
+      %send Unknown error!
       return
     }
-    set %fiqbot_tyrant_vaultalert_ [ $+ [ $chan ] ] %buffer
-    %send Vault alert settings has been set.
   }
-  else %send Unknown error!
+
+  tokenize 32 %fiqbot_tyrant_vaultalert_ [ $+ [ $chan ] ]
+  var %buffer2
+  var %i = 0
+  while (%i < $0) {
+    inc %i
+    var %name = $hget(cards,$+(name,$ [ $+ [ %i ] ]))
+    %buffer2 = %buffer2 $+ , %name
+  }
+  %buffer2 = $right(%buffer2,-2)
+  %buffer = %buffer Current vault alerts: $iif(%buffer2,%buffer2,(none))
+  %send %buffer
   return
 
   :WAR
