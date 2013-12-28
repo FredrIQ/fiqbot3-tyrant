@@ -57,7 +57,7 @@ alias fiqbot.tyrant.cqcoordinates {
   if (%y) %y_result = $+(%y_result,S)
   if (%x < 0) %x_result = $+($calc(%x * -1),W)
   if (%y < 0) %y_result = $+($calc(%y * -1),N)
-  return $+(%x_result,$chr(44),%y_result)
+  return ( $+ $+(%x_result,$chr(44),%y_result) $+ )
 }
 alias fiqbot.tyrant.freelock {
   unset %fiqbot_tyrant_socklock
