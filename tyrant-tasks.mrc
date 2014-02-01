@@ -1003,8 +1003,13 @@ on *:sockread:tyranttask*:{
     goto done
     :CHECKFACTIONMEMBERS
     var %id, %level, %name, %faction_id, %applicant, %rank, %active, %lp, %cq_claimed, %items
+    var %trackerchannel = $fiqbot.tyrant.trackerchannel
     var %finfo = msg $fiqbot.tyrant.trackerchannel [FACTION]
     var %minfo = msg $fiqbot.tyrant.trackerchannel [MEMBER]
+    if (!%trackerchannel) {
+      %finfo = noop
+      %minfo = noop
+    }
     %temp = %tempold $+ %temp
     tokenize 44 %temp
     %counter = 0
@@ -1115,7 +1120,9 @@ on *:sockread:tyranttask*:{
     :CHECKFACTIONNAME
     var %id, %name, %timecheck, %nextid
     tokenize 44 %temp
+    var %trackerchannel = $fiqbot.tyrant.trackerchannel
     var %finfo = msg $fiqbot.tyrant.trackerchannel [FACTION]
+    if (!%trackerchannel) %finfo = noop
     %id = $noqt($gettok($1,2,58))
     %name = $noqt($gettok($2,2,58))
     %timecheck = $noqt($gettok($3,1,58))
