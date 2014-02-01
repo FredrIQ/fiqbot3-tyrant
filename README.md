@@ -7,7 +7,7 @@ Installing
 ==========
 
 * Replicate the directory structure. That is, place the scripts in the **same** directory, and make sure to include the tyrant directory etc.
-* (Recommended) Make sure that cards.xml, cards.fht, factions.fht and conquest.fht is reasonably up to date.
+* (Recommended) Make sure that cards.xml, cards.fht, conquest.fht, factions.fht and raids.fht is reasonably up to date.
   Up to date versions can be grabbed at http://home.fiq.se/fiqbot/assets/
 * Once you've done this, edit configurations as you wish in fiqbot-config.mrc.
 * Replace TYRANT_STATIC_SALT in fiqbot.tyrant.hash with what is supposed to be there. You're on your own for finding this!
