@@ -27,6 +27,14 @@ alias fiqbot.version return 3.3-tyrant
 ;Default: 2.17.09
 alias fiqbot.tyrant.version return 2.17.09
 
+;Tyrant "time hash" salt. This must be changed to the actual salt.
+;The salt can be retrieved only if you know what you're doing.
+;The reason this is censored is to prevent you from being able to
+;understand and use Tyrant's API from this script alone and thus
+;be able to bot easily. By replacing the content here, you accept that I have
+;no responsibility for what you do with API access.
+alias fiqbot.tyrant.salt return TYRANT_STATIC_SALT
+
 ;Directory to save Tyrant XMLs and databases (hash tables) in.
 ;Default: (the script directory)\tyrant
 alias fiqbot.tyrant.directoryconfig return $+($scriptdir,tyrant\)

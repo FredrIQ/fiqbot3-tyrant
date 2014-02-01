@@ -220,11 +220,10 @@ alias fiqbot.tyrant.gainedfp {
 alias fiqbot.tyrant.hash {
   var %time_hash, %msg, %time, %userid
 
-  ;This has been intentionally left out to prevent critical info from being seen in public.
-  ;I do not endorse botting the game to make the game play for you. By inserting the proper
-  ;information here, you agree that I have no responsibility for your use of the code.
-  ;You're on your own for finding what you want to insert here.
-  %time_hash = TYRANT_STATIC_SALT
+  %time_hash = $fiqbot.tyrant.salt
+  if ($md5(%time_hash) != d1fcc25cc6fff42e6de99bc94c831e88) {
+    %send [API warning] Likely incorrect salt. If the salt is correct, file a bug report to FIQ. If this warning is correct, API queries will not work!
+  }
   %msg = $1
   %time = $int($2)
   if ($prop == unixreal) {
