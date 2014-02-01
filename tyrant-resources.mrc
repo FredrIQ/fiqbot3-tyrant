@@ -1,5 +1,6 @@
 on *:START:{
-  if ($exists(tables\cards.fht)) {
+  var %dir = $fiqbot.tyrant.directory
+  if ($exists($+(%dir,tables\cards.fht))) {
     var %hload = fiqbot.tyrant.hload
     %hload cards
     %hload raids
@@ -27,8 +28,12 @@ alias fiqbot.tyrant.downloadxml {
   }
 
   var %file = $+(%dir,$1,.xml)
-  if ($exists(%file)) .remove %file
-
+  if ($exists(%file)) {
+    if ($1 == cards) {
+      %fiqbot_tyrant_cards_md5 = $md5($1,2)
+    }
+    .remove %file
+  }
   var %socket = $+(tyrantxml_,$1)
   if ($sock(%socket)) sockclose %socket
   sockopen %socket kg-dev.tyrantonline.com 80

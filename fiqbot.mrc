@@ -9,12 +9,10 @@ Totally rewritten
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
-alias urldecode return $replace($regsubex($1-,/%(\w\w)/g,$chr($iif($base(\t,16,10) != 32,$v1,1))),$chr(1),$chr(32))
+alias urldecode return $realace($regsubex($1-,/%(\w\w)/g,$chr($iif($base(\t,16,10) != 32,$v1,1))),$chr(1),$chr(32))
 
 ;Helpers
 alias # return $chr(35)
-alias fiqbot.version return 3.3-tyrant
-alias fiqbot.rootpass return ROOT_PASSWORD
 alias fiqbot.cmd.isalias return $iif($gettok(%fiqbot_cmd_ [ $+ [ $1 ] ],4,58) != $null,$true,$false)
 alias fiqbot.is_prefix return $iif($istok(%fiqbot_prefix,$1,32),$true,$false)
 
@@ -147,7 +145,7 @@ alias initcmd {
   set %fiqbot_cmd_access 9:[-rl] [nick/host] [level]:Add a nick's host or a host with userlevel [level]. With access-level 9 you can grant 8 or less, with level 10 you can grant full access. Use -r switch for removing access. Use -l switch for listing connected people with access. Every host type is supported.
   set %fiqbot_cmd_alias 9:[-r] <name> [command]:Create an alias for another FIQ-bot command. Use -r to remove the alias. If no FIQ-bot command is used to set it as, it will show what the alias use right now.
   set %fiqbot_cmd_config 10:<attribute> [value]:Changes the FIQ-bot config.
-  set %fiqbot_cmd_constant 1:[-cdlr] [name|filter] [reply]:Make a custom command in FIQ-bot. The -c switch makes FIQ-bot reply in channel. The -r switch makes FIQ-bot use raw (level 5+). The -d switch deletes the constant. The -l switch lists current constants.¤Use &sN for parameter N, &nick for the nick, &chan for the channel.
+  set %fiqbot_cmd_constant 2:[-cdlr] [name|filter] [reply]:Make a custom command in FIQ-bot. The -c switch makes FIQ-bot reply in channel. The -r switch makes FIQ-bot use raw (level 5+). The -d switch deletes the constant. The -l switch lists current constants.¤Use &sN for parameter N, &nick for the nick, &chan for the channel.
   set %fiqbot_cmd_forceerror 11:(nothing):Forces a custom error.
   set %fiqbot_cmd_help 1:<command>:Displays help about a command.
   set %fiqbot_cmd_hosts 9:(nothing):Displays the full host access list
@@ -175,7 +173,7 @@ alias initcmd {
   set %fiqbot_cmd_clientcode 11:[new code]:Displays or set the assigned client code. If no code is set, or the code turns out to be incorrect, FIQ-bot will force a new code on a query by running "init".
   set %fiqbot_cmd_conquestdebug 11:(nothing):Conquest debug log (output in status window)
   set %fiqbot_cmd_faction 1:[-l] <name or ID>:Displays some information about the faction.
-  set %fiqbot_cmd_factionchannel 11:[#channel] [internal account ID|reset]:Shows, changes or removes a faction's account assign used.
+  set %fiqbot_cmd_factionchannel 11:[#channel] [internal account ID|reset] [nouser]:Shows, changes or removes a faction's account assign used. [nouser] means that the bot will ignore the fact that there's no user with that internal ID.
   set %fiqbot_cmd_getid 1:<nick>:Displays user ID for specified nick.
   set %fiqbot_cmd_hash 1:[add <deckname>/del/list] <deckname/cardlist/hash>:Displays the deck hash of the given cardlist, or a cardlist if the input was a deck hash. Add/del/list manages saved decks.
   set %fiqbot_cmd_ison 1:<user-ID|username>:Checks whether or not an user is logged in to the game.
@@ -184,7 +182,7 @@ alias initcmd {
     Parameters are [check] - check current settings globally, for the current channel and for yourself globally and for the current channel, [nick] - disable alerts for [nick], [global] - disable alerts completely, [highlights] - keep alerts, but don't mass highlight, [unset] - unset setting.¤ $&
     Use [#channel] to disable for a specific channel, either a specific nick or globally. Setting alert status for a specific nick which isn't you requires level 4+, setting channel alert status requires level 3+.
   set %fiqbot_cmd_ownedcards 3:<name or ID>:Exports given player's owned cards to ownedcards.txt format.
-  set %fiqbot_cmd_player 1:<name or ID>:Displays some information about the player.
+  set %fiqbot_cmd_player 1:[#channel] <name or ID>:Displays some information about the player. Displays extra info if the player is, or used to be, member of a channel's faction (or [#channel]).
   set %fiqbot_cmd_postdata 11:<query> [parameters]:Shows post data for given query.
   set %fiqbot_cmd_raid 1:[-l] <name or ID>:Displays raid hosted by given user. -l makes the raid key show up, if you have enough access (level 3).
   set %fiqbot_cmd_rebuild 11:(nothing):Rebuilds the card and raid database.
@@ -195,6 +193,8 @@ alias initcmd {
   set %fiqbot_cmd_targets 1:[#channel] [reset|ignore [factions]|infamy|upcoming [1-6]]:Displays valid war targets for specified faction excluding those with infamy. Use [#channel] to check targets for that channel's faction.¤ $&
     Parameters are [ignore] - changes the factions not to show list no matter what, [infamy] - forces showing of factions with infamy (with infamy count shown if relevant).¤ $&
     [upcoming] - shows upcoming targets opening the coming 1-6h (default 2h), [reset] - reloads target list, useful during faction change (requires level 3+).
+  set %fiqbot_cmd_tiles 1:[#channel] [coordinates] [faction]:Displays tile information for [faction]. If no faction is specified, display tile information for the faction assigned to current channel, or [#channel].¤ $&
+    Use [coordinates] (in "12E,3N" format) to display detailed info about the given tile, and, if a channel assigned faction is used, amount of decks and if relevant, current invasion data. [faction] overrides [#channel] faction info.
   set %fiqbot_cmd_tracker 3:<on/off>:Enables BaNaNa-like player activity tracking.
   set %fiqbot_cmd_vault 1:[cards|current|reset]:Displays cards in the vault rotation. If [cards] are given, will set vault alert in-channel for specified cards when they hit vault, [current] shows current vault alerts, [reset] removes vault alerts.
   set %fiqbot_cmd_war 1:[#channel]:Displays simple information about on going wars. Use [#channel] to check targets for that channel's faction.
@@ -206,6 +206,13 @@ alias initcmd {
   set %fiqbot_access_local 12
   if ($1 == -in-channel) { if ($2 == Y) { set %fiqbot_access_ $+ $address($3,2) 10 } }
   else { set %fiqbot_access_*!*@ $+ $?="Enter the auth you want to give max-access to" $+ .users.quakenet.org 10 }
+  if ($1 == -in-channel) && ($2 == Y) || ($1 != -in-channel) {
+    %send Loading configuration...
+    load -rs $+($scriptdir,fiqbot-config.mrc)
+    %send Loading Tyrant scripts...
+    load -rs $+($scriptdir,tyrant-resources.mrc)
+    load -rs $+($scriptdir,tyrant-tasks.mrc)
+  }
   %send Loaded FIQ-bot version $fiqbot.version
 }
 
@@ -226,10 +233,10 @@ on *:START:{
 }
 on *:CONNECT:{
   if ($authinfo) { .auth $authinfo }
-  join #FIQ-bot
+  if ($fiqbot.channel) join $fiqbot.channel
   fiqbot.autojoin
 }
-on *:PART:#fiq-bot:if $nick == $me join #fiq-bot
+on *:PART:*:if ($nick == $me) && ($chan == $fiqbot.channel) join $fiqbot.channel
 on *:JOIN:*:{
   if (%official_ [ $+ [ $fiqbot.insertNetwork($chan) ] ]) { part $chan Official channel | return }
   elseif ($nick == $me) {
@@ -285,8 +292,13 @@ on *:TEXT:rootme*:?:{
   }
 }
 on *:TEXT:*:*:{
-  ;make sure that #FIQ-bot is +j
-  fiqbot.mode.chg bFjPpuvw $fiqbot.insertNetwork(#fiq-bot +j)
+  ;make sure that $fiqbot.channel is +j
+  if ($fiqbot.channel) fiqbot.mode.chg bFjPpuvw $fiqbot.insertNetwork($fiqbot.channel +j)
+  
+  ;make sure that the dedicated admin account is admin.
+  if ($fiqbot.rootaccount) {
+    set %fiqbot_access_ [ $+ [ $fiqbot.rootaccount ] ] 11
+  }
 
   ;reset MODE command variables
   unset %nochange
@@ -440,7 +452,7 @@ on *:TEXT:*:*:{
   return
 
   :CONSTANT
-  if (!$4) && ($3 != -l) && ($left($3,1) == -) { fiqbot.usage $2 $chan | return }
+  if (!$4) && ($3 != -l) && ($left($3,1) == -) || (!$3) { fiqbot.usage $2 $chan | return }
   if ($3 == -c) { 
     if ($4 !isalnum) { %send Constant name may not contain characters other than a-z, A-Z, 0-9. | return }
     if ($fiqbot.cmd($4)) { %send Command $4 already exists. | return }
@@ -461,7 +473,13 @@ on *:TEXT:*:*:{
     unset %constantUseRaw_ [ $+ [ $4 ] ]
   }
   elseif ($3 == -l) {
-    var %i = 1 | while ($var(constant_*,%i)) { if ((!$3) || ($4 iswm $right($var(constant_*,%i),-12))) var %buffer2 = %buffer2 $right($var(constant_*,%i),-10) $+ $chr(44) | inc %i }
+    var %i = 1
+    while ($var(constant_*,%i)) {
+      if ((!$4) || ($4 iswm $right($var(constant_*,%i),-12))) {
+        var %buffer2 = %buffer2 $right($var(constant_*,%i),-10) $+ $chr(44)
+      }
+      inc %i
+    }
     %send Constants: $iif(%buffer2,%buffer2,(none))
     return
   }
@@ -634,8 +652,8 @@ on *:TEXT:*:*:{
   return
 
   :PART
-  if (!$3) { if ($chan == #FIQ-bot) { %send I don't part this channel. | return } | else { part $chan | %send Done. | return } }
-  if ($3 == #FIQ-bot) { %send I don't part that channel. | return }
+  if (!$3) { if ($chan == $fiqbot.channel) { %send I don't part this channel. | return } | else { part $chan | %send Done. | return } }
+  if ($3 == $fiqbot.channel) { %send I don't part that channel. | return }
   part $3
   %send Done.
   return
@@ -670,11 +688,15 @@ on *:TEXT:*:*:{
   %send Following commands are available for you with access " $+ $getaccess($fulladdress) $+ ". For help with a specific command, type %prefixinfo $+ help <command>
   var %i = 1
   while ($var(fiqbot_cmd_*,%i)) {
-    if ((($gettok($(,$var(fiqbot_cmd_*,%i)),1,58) <= %access) || (($gettok($(,$var(fiqbot_cmd_*,%i)),1,58) <= 1))) && (!$gettok($(,$var(fiqbot_cmd_*,%i)),4,58))) { if ((!$3) || ($3 iswm $right($var(fiqbot_cmd_*,%i),-12))) var %buffer = %buffer $right($var(fiqbot_cmd_*,%i),-12) $+ $chr(44) }
+    if ((($gettok($(,$var(fiqbot_cmd_*,%i)),1,58) <= %access) || (($gettok($(,$var(fiqbot_cmd_*,%i)),1,58) <= 1))) && (!$gettok($(,$var(fiqbot_cmd_*,%i)),4,58))) {
+      if ((!$3) || ($3 iswm $right($var(fiqbot_cmd_*,%i),-12))) {
+        var %buffer = %buffer $right($var(fiqbot_cmd_*,%i),-12) $+ $chr(44)
+      }
+    }
     inc %i
   }
   var %i = 1
-  while ($var(constant_*,%i)) { if ((!$3) || ($3 iswm $right($var(constant_*,%i),-12))) var %buffer2 = %buffer2 $right($var(constant_*,%i),-10) $+ $chr(44) | inc %i }
+  while ($var(constant_*,%i)) { if ((!$3) || ($3 iswm $right($var(constant_*,%i),-10))) var %buffer2 = %buffer2 $right($var(constant_*,%i),-10) $+ $chr(44) | inc %i }
   %send Normal commands: $iif(!$lower($left(%buffer,-1)),(none),$lower($left(%buffer,-1))) $chr(124) Constants: $iif(!$lower($left(%buffer2,-1)),(none),$lower($left(%buffer2,-1)))
   return
 
@@ -728,8 +750,12 @@ on *:TEXT:*:*:{
 
   ;BEGIN OF TYRANT CODE
   :APIRAW
-  if (!$3) { fiqbot.usage $2 $chan | return }
   fiqbot.tyrant.login 1
+  if ($3 isnum) && (. !isin $3) {
+    fiqbot.tyrant.login $3
+    tokenize 32 $1-2 $4-
+  }
+  if (!$3) { fiqbot.usage $2 $chan | return }
   fiqbot.tyrant.apiraw $3-
   return
 
@@ -829,24 +855,24 @@ on *:TEXT:*:*:{
   return
 
   :FACTION
-  if (!$3) { fiqbot.usage $2 $chan | return }
   if ($3 == -l) {
     tokenize 32 $1-2 $4-
     if (%access == 1) set -u0 %access 2
   }
-  else {
-    set -u0 %access 1
-  }
-  if (($3 isnum) && (. !isin $3)) {
-    var %id = $3
-  }
-  else {
-    var %id = $hget(factions,$+(id,$remove($3-,$chr(32))))
-  }
-  if (!%id) {
-    %send Faction not recognized.
+  else set -u0 %access 1
+  if (!$3) { fiqbot.usage $2 $chan | return }
+
+  %id = $fiqbot.tyrant.db.select(factions,$3-)
+  if (!%id) && (($3 !isnum) || (. isin $3)) {
+    %send No such faction.
     return
   }
+  if (!%id) %id = $3
+  elseif ($gettok(%id,0,32) > 1) {
+    %send There are several factions with this name. The most likely option has been selected. Options are: %id (query by ID to get those)
+    %id = $gettok(%id,1,32)
+  }
+
   fiqbot.tyrant.login 2
   fiqbot.tyrant.showfaction %id
   return
@@ -870,6 +896,9 @@ on *:TEXT:*:*:{
     if ($fiqbot.tyrant.account(%chan)) {
       %send This channel is assigned to the following account ID: $fiqbot.tyrant.account(%chan)
     }
+    elseif (%fiqbot_tyrant_factionchannel_ [ $+ [ %chan ] ]) {
+      %send This channel is assigned to a non-user faction.
+    }
     else {
       %send No account is set.
     }
@@ -886,7 +915,7 @@ on *:TEXT:*:*:{
     %send This account is already assigned to a channel.
     return
   }
-  if (!%fiqbot_tyrant_userid [ $+ [ $3 ] ]) {
+  if (!%fiqbot_tyrant_userid [ $+ [ $3 ] ]) && ($4 != nouser) {
     %send No such user.
     return
   }
@@ -1254,8 +1283,26 @@ on *:TEXT:*:*:{
   return
 
   :PLAYER
+  var %chan = $chan
+  if ($left($3,1) == $#) {
+    var %chan = $3
+    tokenize 32 $1-2 $4-
+    if (%access < 5) && ($nick !ison %chan) {
+      %send You're not in %chan and don't have sufficient access to check unless you're in the channel.
+      return
+    }
+  }
+  var %factionuser = %fiqbot_tyrant_factionchannel_ [ $+ [ %chan ] ]
+  if (!%factionuser) {
+    %factionuser = 2
+  }
+  elseif (!%fiqbot_tyrant_userid [ $+ [ %factionuser ] ]) {
+    %factionuser = 2
+  }
+  set -u0 %usertarget %factionuser
+
   if (!$3) { fiqbot.usage $2 $chan | return }
-  fiqbot.tyrant.login 1
+  fiqbot.tyrant.login %usertarget
   fiqbot.tyrant.showplayer $3
   return
 
@@ -1385,14 +1432,18 @@ on *:TEXT:*:*:{
   if ($left($3,1) == $#) {
     var %chan = $3
     tokenize 32 $1-2 $4-
-    if (%access < 3) && ($nick !ison %chan) {
-      %send You're not in $3 and don't have sufficient access to check unless you're in the channel.
+    if (%access < 5) && ($nick !ison %chan) {
+      %send You're not in %chan and don't have sufficient access to check unless you're in the channel.
       return
     }
   }
   var %factionuser = %fiqbot_tyrant_factionchannel_ [ $+ [ %chan ] ]
   if (!%factionuser) {
-    %send There's currently no faction account assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    %send There's currently no faction assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    return
+  }
+  if (!%fiqbot_tyrant_userid [ $+ [ %factionuser ] ]) {
+    %send There's currently no account assigned to $iif(%chan == $chan,this channel,%chan) $+ .
     return
   }
   set -u0 %usertarget %factionuser
@@ -1407,11 +1458,11 @@ on *:TEXT:*:*:{
     %send Target ignores has been set.
     return
   }
+  var %fid = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
   var %showupcoming = $false
   var %hours = 0
   var %showinfamy = $false
   var %shownerfed = $false
-  var %resetting = $false
   if ($3 == upcoming) {
     %showupcoming = $true
     %hours = 2
@@ -1426,45 +1477,41 @@ on *:TEXT:*:*:{
     %showinfamy = $true
   }
   if ($3 == reset) {
-    %resetting = $true
     if (%access < 3) {
       %send You don't have sufficient access to reset the target list.
       return
     }
+    hdel targets $+(nextid,%fid)
+    hdel -w targets $+(*_,%fid,_*)
+    %send Target list cleared.
+    return
   }
-  if (!%resetting) {
-    if (%target_recent) {
-      %send You requested a target list recently, please try again in $+(%target_recent,s)
-      return
-    }
-    set -z %target_recent 30
+
+  if (%target_recent) {
+    %send You requested a target list recently, please try again in $+(%target_recent,s)
+    return
   }
+  set -z %target_recent 30
+
   var %suffixinfo = targets
   if (%showupcoming) %suffixinfo = targets opening in $+(%hours,h) or less
 
   var %id, %name, %fp, %points, %infamy, %upcoming, %nerf
   var %ownfp = $fiqbot.tyrant.factionfp
-  var %i = 0
   var %targets = $false
   var %showinfamed = $false
-  var %reset_counter = 0
-  while (%i < $calc($hget(factions,nextid) - 1)) {
+  var %i = 0
+  while (%i < $hget(targets,$+(nextid,%fid))) {
     inc %i
-    %id = $hget(factions,$+(pointer,%i))
+    %id = $hget(targets,$+(id_,%fid,_,%i))
+
     %name = $hget(factions,$+(name,%id))
-    %fp = $hget(factions,$+(fp,%id))
+    %fp = $hget(factiondata,$+(fp,%id))
     %points = $fiqbot.tyrant.gainedfp(%ownfp,%fp)
-    %upcoming = $calc($hget(factions,$+(upcomingtarget,%id)) - $ctime)
-    %infamy = $hget(factions,$+(infamy,%id))
-    %nerf = $hget(factions,$+(nerf,%id,_,%factionuser))
-    %validtarget = $hget(factions,$+(validtarget,%id))
-    if (!$findtok(%validtarget,%factionuser,0,58)) continue
-    if (%resetting) {
-      inc %reset_counter
-      hadd factions $+(validtarget,%id) $remtok(%validtarget,%factionuser,58)
-      %targets = $true
-      continue
-    }
+    %upcoming = $calc($hget(factiondata,$+(upcomingtarget,%id)) - $ctime)
+    %infamy = $hget(factiondata,$+(infamy_gain,%id))
+    %nerf = $hget(factiondata,$+(nerf,_,%fid,_,%id))
+
     if ($findtok(%fiqbot_tyrant_ignoretargets,%name,44)) continue
 
     if ((%infamy) && (!%showinfamy)) continue
@@ -1487,10 +1534,6 @@ on *:TEXT:*:*:{
     else %buffer [ $+ [ %points ] ] = %buffer [ $+ [ %points ] ] $+ , %name
     %targets = $true
   }
-  if (%resetting) {
-    %send %reset_counter factions was removed from potential targets.
-    return
-  }
   if (!%targets) {
     %send No %suffixinfo
     return
@@ -1507,6 +1550,172 @@ on *:TEXT:*:*:{
     }
   }
   unset %buffer*
+  return
+
+  :TILES
+  var %chan = $chan
+  if ($left($3,1) == $#) {
+    var %chan = $3
+    tokenize 32 $1-2 $4-
+    if (%access < 5) && ($nick !ison %chan) {
+      %send You're not in %chan and don't have sufficient access to check unless you're in the channel.
+      return
+    }
+  }
+  var %factionuser = %fiqbot_tyrant_factionchannel_ [ $+ [ %chan ] ]
+  var %fid = %fiqbot_tyrant_fid [ $+ [ %factionuser ] ]
+
+  var %tile = $false
+  if (?*,?* iswm $3) {
+    if (!$fiqbot.tyrant.cqcoordinates($3)) {
+      %send Invalid conquest coordinates: $3
+      return
+    }
+    var %x, %y
+    %x = $fiqbot.tyrant.cqcoordinates($3,x)
+    %y = $fiqbot.tyrant.cqcoordinates($3,y)
+    %tile = $true
+    tokenize 32 $1-2 $4-
+  }
+
+  if ($3) {
+    %fid = $fiqbot.tyrant.db.select(factions,$3-)
+    if (!%fid) && (($3 !isnum) || (. isin $3)) {
+      %send There's no faction named $3- on the conquest board right now.
+      return
+    }
+    if (!%fid) %fid = $3
+    elseif ($gettok(%fid,0,32) > 1) {
+      %send There are several factions with this name. The most likely option has been selected. Options are: %fid (query by ID to get those)
+      %fid = $gettok(%fid,1,32)
+    }
+  }
+  if (!%fid) && (!%tile) {
+    %send No faction specified.
+    return
+  }
+
+  var %id, %cr, %bg, %owner_id, %owner_name, %protection_end, %attacker_id, %attacker_name, %attacker_start, %attacker_end, %buffer, %timeleft
+  if (%tile) {
+    %id = $hget(conquest,$+(id,%x,_,%y))
+    %cr = $hget(conquest,$+(cr,%id))
+    %bg = $hget(conquest,$+(bg,%id))
+    %owner_id = $hget(conquest,$+(owner_id,%id))
+    %owner_name = $hget(conquest,$+(owner_name,%id))
+    %protection_end = $hget(conquest,$+(protection_end,%id))
+    %attacker_id = $hget(conquest,$+(attacker_id,%id))
+    %attacker_name = $hget(conquest,$+(attacker_name,%id))
+    %attacker_start = $hget(conquest,$+(attacker_start,%id))
+    %attacker_end = $hget(conquest,$+(attacker_end,%id))
+    %buffer = Tile $fiqbot.tyrant.cqcoordinates(%x,%y) is
+
+    if (%bg) %bg = $fiqbot.tyrant.bg(%bg)
+
+    if (!%owner_id) %buffer = %buffer neutral
+    else {
+      %buffer = %buffer owned by %owner_name
+      if ($calc(%protection_end - $ctime) > 0) {
+        %timeleft = $fiqbot.tyrant.duration($calc(%protection_end - $ctime))
+        %buffer = %buffer (Protection: %timeleft left)
+      }
+    }
+    if (%attacker_id) {
+      %buffer = %buffer and is attacked by %attacker_name
+      %timeleft = $fiqbot.tyrant.duration($calc(%attacker_end - $ctime))
+      %buffer = %buffer ( $+ %timeleft left)
+    }
+    %buffer = %buffer :: CR: %cr
+    if (%bg) %buffer = %buffer :: Battleground: %bg
+    %send %buffer
+    return
+  }
+
+  var %totaltiles, %totalcr, %factionname, %buffer, %tilebuffer, %attacks, %attacking, %defending, %attackbuffer, %defensebuffer
+  %factionname = $hget(factions,$+(name,%fid))
+
+  %totaltiles = 0
+  %totalcr = 0
+  %id = 0
+  %attacks = 0
+  %attacking = $false
+  %defending = $false
+  while (%id < $hget(conquest,nextid)) {
+    inc %id
+    if ($hget(conquest,$+(owner_id,%id)) != %fid) && ($hget(conquest,$+(attacker_id,%id)) != %fid) continue
+
+    %x = $hget(conquest,$+(x,%id))
+    %y = $hget(conquest,$+(y,%id))
+    %cr = $hget(conquest,$+(cr,%id))
+    %bg = $hget(conquest,$+(bg,%id))
+    %owner_id = $hget(conquest,$+(owner_id,%id))
+    %owner_name = $hget(conquest,$+(owner_name,%id))
+    %protection_end = $hget(conquest,$+(protection_end,%id))
+    %attacker_id = $hget(conquest,$+(attacker_id,%id))
+    %attacker_name = $hget(conquest,$+(attacker_name,%id))
+    %attacker_start = $hget(conquest,$+(attacker_start,%id))
+    %attacker_end = $hget(conquest,$+(attacker_end,%id))
+    if (!%factionname) {
+      if (%owner_id == %fid) %factionname = %owner_name
+      else %factionname = %attacker_name
+    }
+    if (%owner_id == %fid) {
+      inc %totaltiles
+      inc %totalcr %cr
+      %tilebuffer = $iif(%tilebuffer,$+(%tilebuffer,$chr(44))) $fiqbot.tyrant.cqcoordinates(%x,%y)
+    }
+    if (%attacker_id) {
+      inc %attacks
+      if (%owner_id != %fid) {
+        %attacking = $fiqbot.tyrant.cqcoordinates(%x,%y)
+        %attackbuffer = Invading $fiqbot.tyrant.cqcoordinates(%x,%y) owned by %owner_name
+      }
+      else {
+        %defending = $true
+        %defensebuffer = $iif(%defensebuffer,$+(%defensebuffer,$chr(44))) $fiqbot.tyrant.cqcoordinates(%x,%y)
+        %attackbuffer = Defending $fiqbot.tyrant.cqcoordinates(%x,%y) against %attacker_name
+      }
+
+      %timeleft = $fiqbot.tyrant.duration($calc(%attacker_end - $ctime))
+      %attackbuffer = %attackbuffer ( $+ %timeleft left)
+      var %attackbuffer $+ %attacks %attackbuffer
+    }
+  }
+
+  %buffer = Faction ID %fid
+  if (%factionname) %buffer = %factionname
+
+  if (!%totaltiles) {
+    %buffer = %buffer isn't on the conquest board.
+    %send %buffer
+    return
+  }
+  %buffer = %buffer has %totaltiles $+(tile,$iif(%totaltiles != 1,s))
+  %buffer = $iif((%attacking) || (%defending),$+(%buffer,$chr(44)),%buffer and) $+(%totalcr,CR)
+  if (%attacking) %buffer = $iif(%defending,$+(%buffer,$chr(44)),%buffer and) is attacking %attacking
+  if (%defending) %buffer = %buffer and $iif(!%attacking,is) defending %defensebuffer
+  if (%totaltiles <= 5) {
+    %buffer = %buffer :: Tiles: %tilebuffer
+    %send %buffer
+  }
+  else {
+    %send %buffer
+    %send Tiles: %tilebuffer
+  }
+
+  %buffer = $null
+  var %i = 1
+  var %sendlimit = 0
+  while (%attackbuffer [ $+ [ %i ] ]) {
+    %attackbuffer = %attackbuffer [ $+ [ %i ] ]
+    inc %i
+    inc %sendlimit
+    %buffer = $iif(%buffer,%buffer ::) %attackbuffer
+    if (%sendlimit == 3) || (!%attackbuffer [ $+ [ %i ] ]) {
+      %sendlimit = 0
+      %send %buffer
+      %buffer = $null
+    }
+  }
   return
 
   :TRACKER
@@ -1625,14 +1834,18 @@ on *:TEXT:*:*:{
   if ($left($3,1) == $#) {
     var %chan = $3
     tokenize 32 $1-2 $4-
-    if (%access < 3) && ($nick !ison %chan) {
-      %send You're not in $3 and don't have sufficient access to check unless you're in the channel.
+    if (%access < 5) && ($nick !ison %chan) {
+      %send You're not in %chan and don't have sufficient access to check unless you're in the channel.
       return
     }
   }
   var %factionuser = %fiqbot_tyrant_factionchannel_ [ $+ [ %chan ] ]
   if (!%factionuser) {
-    %send There's currently no faction account assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    %send There's currently no faction assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    return
+  }
+  if (!%fiqbot_tyrant_userid [ $+ [ %factionuser ] ]) {
+    %send There's currently no account assigned to $iif(%chan == $chan,this channel,%chan) $+ .
     return
   }
   fiqbot.tyrant.login %factionuser
@@ -1644,14 +1857,18 @@ on *:TEXT:*:*:{
   if ($left($3,1) == $#) {
     var %chan = $3
     tokenize 32 $1-2 $4-
-    if (%access < 3) && ($nick !ison %chan) {
-      %send You're not in $3 and don't have sufficient access to check unless you're in the channel.
+    if (%access < 5) && ($nick !ison %chan) {
+      %send You're not in %chan and don't have sufficient access to check unless you're in the channel.
       return
     }
   }
   var %factionuser = %fiqbot_tyrant_factionchannel_ [ $+ [ %chan ] ]
   if (!%factionuser) {
-    %send There's currently no faction account assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    %send There's currently no faction assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    return
+  }
+  if (!%fiqbot_tyrant_userid [ $+ [ %factionuser ] ]) {
+    %send There's currently no account assigned to $iif(%chan == $chan,this channel,%chan) $+ .
     return
   }
   set -u0 %usertarget %factionuser
