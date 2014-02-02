@@ -715,7 +715,7 @@ on *:sockopen:tyranttask*:{
     var %scriptline = $read($script,n,%line)
   }
   if (%fiqconfig_phpLikeErrors) { %send $iif(c isincs $chan(#).mode,Error: $1 in %script on line %line,Error: $1 in %script on line %line) }
-  else { %sendType Error: $error }
+  else { %send Error: $error }
   if (!%scriptline) var %scriptline = error
   %send Line %line contains the following: %scriptline
   .reseterror
@@ -1569,7 +1569,7 @@ on *:sockread:tyranttask*:{
     var %scriptline = $read($script,n,%line)
   }
   if (%fiqconfig_phpLikeErrors) { echo @fiqbot $iif(c isincs $chan(#).mode,Error: $1 in %script on line %line,Error: $1 in %script on line %line) }
-  else { %sendType Error: $error }
+  else { %send Error: $error }
   if (!%scriptline) var %scriptline = error
   echo @fiqbot Line %line contains the following: %scriptline
   echo @fiqbot Temp: %temp
@@ -1688,7 +1688,7 @@ on *:sockclose:tyranttask*:{
     var %scriptline = $read($script,n,%line)
   }
   if (%fiqconfig_phpLikeErrors) { %send $iif(c isincs $chan(#).mode,Error: $1 in %script on line %line,Error: $1 in %script on line %line) }
-  else { %sendType Error: $error }
+  else { %send Error: $error }
   if (!%scriptline) var %scriptline = error
   %send Line %line contains the following: %scriptline
   .reseterror

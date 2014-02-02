@@ -1904,7 +1904,7 @@ on *:TEXT:*:*:{
     var %scriptline = $read($script,n,%line)
   }
   if (%fiqconfig_phpLikeErrors) { %send $iif(c isincs $chan(#).mode,Error: $1 in %script on line %line,Error: $1 in %script on line %line) }
-  else { %sendType Error: $error }
+  else { %send Error: $error }
   if (!%scriptline) var %scriptline = error
   %send Line %line contains the following: %scriptline
   .reseterror
