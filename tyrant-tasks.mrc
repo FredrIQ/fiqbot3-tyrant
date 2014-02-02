@@ -714,8 +714,7 @@ on *:sockopen:tyranttask*:{
     var %line = $left($gettok($2,2,32),-1)
     var %scriptline = $read($script,n,%line)
   }
-  if (%fiqconfig_phpLikeErrors) { %send $iif(c isincs $chan(#).mode,Error: $1 in %script on line %line,Error: $1 in %script on line %line) }
-  else { %send Error: $error }
+  %send Error: $error
   if (!%scriptline) var %scriptline = error
   %send Line %line contains the following: %scriptline
   .reseterror
@@ -1560,6 +1559,7 @@ on *:sockread:tyranttask*:{
   }
 
   :error
+  set -u0 %send echo @fiqbot
   if ($error) var %error = $error
   else var %error = /error: unknown error
   tokenize 40 %error
@@ -1568,8 +1568,7 @@ on *:sockread:tyranttask*:{
     var %line = $left($gettok($2,2,32),-1)
     var %scriptline = $read($script,n,%line)
   }
-  if (%fiqconfig_phpLikeErrors) { echo @fiqbot $iif(c isincs $chan(#).mode,Error: $1 in %script on line %line,Error: $1 in %script on line %line) }
-  else { %send Error: $error }
+  %send Error: $error
   if (!%scriptline) var %scriptline = error
   echo @fiqbot Line %line contains the following: %scriptline
   echo @fiqbot Temp: %temp
@@ -1687,8 +1686,7 @@ on *:sockclose:tyranttask*:{
     var %line = $left($gettok($2,2,32),-1)
     var %scriptline = $read($script,n,%line)
   }
-  if (%fiqconfig_phpLikeErrors) { %send $iif(c isincs $chan(#).mode,Error: $1 in %script on line %line,Error: $1 in %script on line %line) }
-  else { %send Error: $error }
+  %send Error: $error
   if (!%scriptline) var %scriptline = error
   %send Line %line contains the following: %scriptline
   .reseterror

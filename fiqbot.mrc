@@ -1903,8 +1903,7 @@ on *:TEXT:*:*:{
     var %line = $left($gettok($2,2,32),-1)
     var %scriptline = $read($script,n,%line)
   }
-  if (%fiqconfig_phpLikeErrors) { %send $iif(c isincs $chan(#).mode,Error: $1 in %script on line %line,Error: $1 in %script on line %line) }
-  else { %send Error: $error }
+  %send Error: $error
   if (!%scriptline) var %scriptline = error
   %send Line %line contains the following: %scriptline
   .reseterror
