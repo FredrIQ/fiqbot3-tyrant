@@ -741,7 +741,7 @@ on *:TEXT:*:*:{
   :WHOIS
   if ($2 == WHOAMI) { tokenize 32 $1-2 $fulladdress }
   elseif ($2 == WHOIS) {
-    if (!$3) { .notice $nick Syntax: %fiqbot_prefix $+ FIQ WHOIS <nick/host> | return }
+    if (!$3) { fiqbot.usage $2 $chan | return }
     elseif (!$ial($3)) { .notice $nick $3 isn't on any common channels with me. | return }
     tokenize 32 $1-2 $ial($3)
   }
