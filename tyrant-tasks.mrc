@@ -11,7 +11,7 @@ alias fiqbot.tyrant.init {
     hmake socketdata 100
     hadd socketdata nextid 1
   }
-  if ($exists(tables\users.fht)) {
+  if ($exists($+($fiqbot.tyrant.directory,tables\users.fht))) {
     var %hload = fiqbot.tyrant.hload
     %hload users
     %hload userdata
@@ -466,17 +466,19 @@ alias fiqbot.tyrant.runkongsocket {
     halt
   }
 
-  var %db_user = $fiqbot.tyrant.db.select(users,%user)
-  if ((%user isnum) && (. !isin %user) || (%db_user)) {
-    if (%db_user) {
-      if ($gettok(%db_user,0,32) > 1) {
-        %send There are several players with this name. The most likely option has been selected. Options are: %db_user (query by ID to get those)
+  if (%task != showid) {
+    var %db_user = $fiqbot.tyrant.db.select(users,%user)
+    if ((%user isnum) && (. !isin %user) || (%db_user)) {
+      if (%db_user) {
+        if ($gettok(%db_user,0,32) > 1) {
+          %send There are several players with this name. The most likely option has been selected. Options are: %db_user (query by ID to get those)
+        }
+        set -u0 %user $gettok(%db_user,1,32)
       }
-      set -u0 %user $gettok(%db_user,1,32)
+      set -u0 %params $+(%params,%user)
+      fiqbot.tyrant.runsocket
+      return
     }
-    set -u0 %params $+(%params,%user)
-    fiqbot.tyrant.runsocket
-    return
   }
   var %i = 0
   while (%metadata [ $+ [ $calc(%i + 1) ] ]) {
@@ -739,15 +741,24 @@ on *:sockread:tyranttask*:{
     }
     if (!%headers_completed) {
       sockread 3000 &temp
+      if (!$sockbr) return
       if (%task == raw) echo -s Initial chunk: $bvar(&temp,1,3000).text
       var %headers, %temp
       %temp = $bvar(&temp,$bfind(&temp,1,123),3000).text
+      var %headers_completed = 1
+      if (!$bfind(&temp,1,123)) {
+        if (%task == raw) {
+          echo -s Incomplete headers!
+          echo -s 
+        }
+        %headers_completed = 0
+        goto done
+      }
       %headers = $left($bvar(&temp,1,3000).text,$+(-,$calc($len(%temp) + 2)))
-      if (%task == raw) {
+      if (%task == raw) && (%headers_completed) {
         echo -s Headers: %headers
         echo -s 
       }
-      var %headers_completed = 1
     }
     else {
       inc %headers_completed
@@ -757,6 +768,8 @@ on *:sockread:tyranttask*:{
       hadd socketdata $+(tempold,%sockid) %temp
       %temp = $bvar(&temp,1,2000).text
     }
+    
+    if (!%headers_completed) goto done
 
     hadd socketdata $+(temp,%sockid) %temp
     hadd socketdata $+(headers_completed,%sockid) %headers_completed
@@ -765,7 +778,7 @@ on *:sockread:tyranttask*:{
       var %clientcode = %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
       if (!%bruteforcing [ $+ [ %usertarget ] ]) {
         %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] = 0
-        set -u0 %bruteforcing [ $+ [ %usertarget ] ] %sockid
+        set %bruteforcing [ $+ [ %usertarget ] ] %sockid
         hadd socketdata $+(bruteforcing,%sockid) %sockid
         set -u0 %bruteforcing 1
       }
@@ -787,7 +800,7 @@ on *:sockread:tyranttask*:{
       set -u5 %forcedcode [ $+ [ %usertarget ] ] 1
       hdel socketdata $+(bruteforcing,%sockid)
     }
-    if ((!%headers_completed) || (!$sockbr)) goto done
+    if (!$sockbr) goto done
     if (!%task) goto done
     goto %task
     :GETKONGID
@@ -799,6 +812,7 @@ on *:sockread:tyranttask*:{
       return
     }
     var %id = $noqt($gettok($5,2,58))
+    echo -s returned data: %temp
     if (%metadata2 == showid) {
       %send User ID: %id
       unset %task
@@ -1412,7 +1426,8 @@ on *:sockread:tyranttask*:{
       }
       else {
         if (%vaultend != %fiqbot_tyrant_vaultend) {
-          msg $fiqbot.tyrant.trackerchannel [VAULT] New cards: %buffer :: %end
+          var %trackerchannel = $fiqbot.tyrant.trackerchannel
+          if (%trackerchannel) msg %trackerchannel [VAULT] New cards: %buffer :: %end
           %fiqbot_tyrant_vaultend = %vaultend
         }
         var %i = 0
@@ -1553,7 +1568,7 @@ on *:sockread:tyranttask*:{
     :done
     unset %bruteforcing
     if ($sockbr == 0) {
-      msg #fiq-bot [Bot error] no clean exit
+      echo @fiqbot [Bot error] no clean exit
       return
     }
   }
@@ -1670,6 +1685,7 @@ on *:sockclose:tyranttask*:{
   :CHECKVAULT
   :CHECKWARS
   :SHOWFACTION
+  :SHOWID
   :SHOWONLINESTATUS
   :SHOWOWNEDCARDS
   :SHOWRAID

@@ -30,7 +30,7 @@ alias fiqbot.tyrant.downloadxml {
   var %file = $+(%dir,$1,.xml)
   if ($exists(%file)) {
     if ($1 == cards) {
-      %fiqbot_tyrant_cards_md5 = $md5($1,2)
+      %fiqbot_tyrant_cards_md5 = $md5(%file,2)
     }
     .remove %file
   }
