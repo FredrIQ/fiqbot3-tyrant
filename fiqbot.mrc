@@ -356,7 +356,7 @@ on *:TEXT:*:*:{
   }
 
   ;tokenizing trickery to make sure $N- contains the correct info
-  ;regardless of short/long prefix
+  ;regardless of using prefix or not (no prefix means used in query)
   if (!%prefix) tokenize 32 a $1-
 
   ;return if no command was used (caused by stuff like "!FIQ" without params
@@ -370,7 +370,7 @@ on *:TEXT:*:*:{
   }
   else {
     if (!%prefix) { return }
-    if ($fiqbot.mode($fiqbot.insertNetwork($chan),P)) set -u0 %send msg $chan
+    if ($fiqbot.mode($fiqbot.insertNetwork($chan),p)) set -u0 %send msg $chan
   }
 
   ;escape input for the command name to prevent evil evalutions
