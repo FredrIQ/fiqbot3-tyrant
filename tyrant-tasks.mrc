@@ -1087,7 +1087,7 @@ on *:sockread:tyranttask*:{
         if (!%usercheck) %usercheck = 0
         if (%members != 1) dec %usercheck
         var %usercheck_current = $hget(userdata,$+(usercheck,%idx))
-        if (!%usercheck_current) %usercheck_current = -10
+        if (!%usercheck_current) %usercheck_current = -11
         if (%usercheck_current < $calc(%usercheck - 10)) {
           if (%spam_counter < 5) {
             if (%spam_counter < 4) {
