@@ -315,8 +315,8 @@ alias fiqbot.tyrant.updatefactioninfo {
   while (%fiqbot_tyrant_userid [ $+ [ %i ] ]) {
     if (%fiqbot_tyrant_fname [ $+ [ %i ] ]) && (!%bruteforcing [ $+ [ %i ] ]) {
       
-      ;For checking faction member rank changes and such. Might be spammy, especially the 1st run and is thus disabled per default.
-      ;fiqbot.tyrant.checkfactionmembers %i
+      ;Member tracking
+      fiqbot.tyrant.checkfactionmembers %i
       
       ;Unfinished, for CQ assist
       ;fiqbot.tyrant.checkinvasion %i
@@ -791,6 +791,10 @@ on *:sockread:tyranttask*:{
       }
       inc %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
       if (%forcedcode [ $+ [ %usertarget ] ]) %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] = %clientcode
+      if (%fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] > 1000) {
+        echo -s [API warning] Failed to re-identify (did you refresh page twice?)! Re-trying...
+        %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] = 0
+      }
       fiqbot.tyrant.runsocket %sockid
       return
     }
@@ -1014,7 +1018,7 @@ on *:sockread:tyranttask*:{
     hadd socketdata $+(temp,%sockid) %temp
     goto done
     :CHECKFACTIONMEMBERS
-    var %id, %level, %name, %faction_id, %applicant, %rank, %active, %lp, %cq_claimed, %items
+    var %id, %level, %name, %faction_id, %applicant, %rank, %active, %lp, %cq_claimed, %items, %spam_counter
     var %trackerchannel = $fiqbot.tyrant.trackerchannel
     var %finfo = msg $fiqbot.tyrant.trackerchannel [FACTION]
     var %minfo = msg $fiqbot.tyrant.trackerchannel [MEMBER]
@@ -1085,8 +1089,17 @@ on *:sockread:tyranttask*:{
         var %usercheck_current = $hget(userdata,$+(usercheck,%idx))
         if (!%usercheck_current) %usercheck_current = -10
         if (%usercheck_current < $calc(%usercheck - 10)) {
-          %finfo %name joined %faction_name
-          %fc.send %name joined the faction
+          if (%spam_counter < 5) {
+            if (%spam_counter < 4) {
+              %finfo %name joined %faction_name
+              %fc.send %name joined the faction
+            }
+            else {
+              %finfo (...)
+              %fc.send (...)
+            }
+            inc %spam_counter
+          }
           %newmember = $true
         }
         else {
