@@ -149,12 +149,12 @@ alias initcmd {
   set %fiqbot_cmd_forceerror 11:(nothing):Forces a custom error.
   set %fiqbot_cmd_help 1:<command>:Displays help about a command.
   set %fiqbot_cmd_hosts 9:(nothing):Displays the full host access list
-  set %fiqbot_cmd_join 1:<channel>:Makes FIQ-bot joining <channel>.
+  set %fiqbot_cmd_join 9:<channel>:Makes FIQ-bot joining <channel>.
   set %fiqbot_cmd_mode 4:<nick/host/#channel> [+/-flags]:Sets <nick/host/#channel> with flags. If no flags is specified, show current flags.¤ $&
     Nick flags is +b (auto-ban), +d (no-op), +o (auto-op), +p (protect), +P (forces you to use prefix in query), +q (no-voice), +Q (makes the bot send to your query instead) +v (auto-voice).¤ $&
     Channel flags is +b (force-deop if nick doesn't have level 5 or more), +d (ignore on access denied), +F (freeze-ops), +j (auto-join), +P (public - output sent in channel), +p (no-prefix), +u (ignore unknown commands), +v (voiceall), +w (enable-welcome).
   set %fiqbot_cmd_official 1:(nothing):Sets the current channel to "official" and prevent the bot from joining this channel again. This can only be done by IRC Operators or people with user level 10 (Admin).
-  set %fiqbot_cmd_part 1:<channel>:Makes FIQ-bot parting <channel>.
+  set %fiqbot_cmd_part 9:<channel>:Makes FIQ-bot parting <channel>.
   set %fiqbot_cmd_prefix 9:[prefixes]:Shows or changes the prefix FIQ-bot use.
   set %fiqbot_cmd_reload 11:[-u]:Reloads variables. If -u switch is used, unsets all variables and makes you level 10.
   set %fiqbot_cmd_remote 10:<command>:Make FIQ-bot use a mIRC command with custom parameters.
