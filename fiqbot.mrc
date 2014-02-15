@@ -158,8 +158,8 @@ alias initcmd {
   set %fiqbot_cmd_mode 4:<nick/host/#channel> [+/-flags]:Sets <nick/host/#channel> with flags. If no flags is specified, show current flags.¤ $&
     Nick flags is +b (auto-ban), +d (no-op), +o (auto-op), +p (protect), +P (forces you to use prefix in query), +q (no-voice), +Q (makes the bot send to your query instead) +v (auto-voice).¤ $&
     Channel flags is +b (force-deop if nick doesn't have level 5 or more), +d (ignore on access denied), +F (freeze-ops), +j (auto-join), +P (public - output sent in channel), +p (no-prefix), +u (ignore unknown commands), +v (voiceall), +w (enable-welcome).
-  set %fiqbot_cmd_official 1:(nothing):Sets the current channel to "official" and prevent the bot from joining this channel again. This can only be done by IRC Operators or people with user level 10 (Admin).
-  set %fiqbot_cmd_part 9:<channel>:Makes FIQ-bot parting <channel>.
+  set %fiqbot_cmd_official 1:[#channel]:Sets the current channel, or [#channel], to "official" and prevent the bot from joining this channel again. This can only be done by IRC Operators or people with user level 10 (Admin).
+  set %fiqbot_cmd_part 9:[#channel]:Makes FIQ-bot leave [#channel], or current channel if not specified.
   set %fiqbot_cmd_prefix 9:[prefixes]:Shows or changes the prefix FIQ-bot use.
   set %fiqbot_cmd_reload 11:[-u]:Reloads variables. If -u switch is used, unsets all variables and makes you level 10.
   set %fiqbot_cmd_remote 10:<command>:Make FIQ-bot use a mIRC command with custom parameters.
@@ -256,11 +256,12 @@ on *:START:{
 on *:CONNECT:{
   if ($authinfo) { .auth $authinfo }
   if ($fiqbot.channel) join $fiqbot.channel
+  if ($fiqbot.trackerchannel) join $fiqbot.trackerchannel
   fiqbot.autojoin
 }
-on *:PART:*:if ($nick == $me) && ($chan == $fiqbot.channel) join $fiqbot.channel
+on *:PART:*:if ($nick == $me) && (($chan == $fiqbot.channel) || ($chan == $fiqbot.trackerchannel)) join $fiqbot.channel
 on *:JOIN:*:{
-  if (%official_ [ $+ [ $fiqbot.insertNetwork($chan) ] ]) { part $chan Official channel | return }
+  if (%official_ [ $+ [ $fiqbot.insertNetwork($chan) ] ]) && ($chan != $fiqbot.channel) { part $chan Official channel | return }
   elseif ($nick == $me) {
     if (!%fiqbot_joined_ [ $+ [ $fiqbot.insertNetwork($chan) ] ]) { set %fiqbot_mode_ $+ $fiqbot.insertNetwork($chan) p | set %fiqbot_joined_ $+ $fiqbot.insertNetwork($chan) 1 }
   }
@@ -313,9 +314,6 @@ on *:TEXT:rootme*:?:{
   }
 }
 on *:TEXT:*:*:{
-  ;make sure that $fiqbot.channel is +j
-  if ($fiqbot.channel) fiqbot.mode.chg bFjPpuvw $fiqbot.insertNetwork($fiqbot.channel +j)
-  
   ;make sure that the dedicated admin account is admin.
   if ($fiqbot.rootaccount) {
     set %fiqbot_access_ [ $+ [ $fiqbot.rootaccount ] ] 11
@@ -326,7 +324,7 @@ on *:TEXT:*:*:{
   unset %changedmode
 
   ;prevent infinite loop
-  if ($nick == $me) && ($1 == Unknown) { return }
+  if ($nick == $me) { return }
 
   ;set -u0 is used to create global variables which are erased
   ;on script exit
@@ -640,6 +638,7 @@ on *:TEXT:*:*:{
 
   :JOIN
   if (!$3) { fiqbot.usage $2 $chan | return }
+  if (, isin $3) { %send I don't join multiple channels simultaneously. | return }
   if (%official_ [ $+ [ $gettok($3,1,44) ] ]) { %send This channel is official. The channel couldn't be joined. | return }
   set -u3 %fiqbot_joinedby $nick
   join $gettok($3,1,44)
@@ -659,23 +658,30 @@ on *:TEXT:*:*:{
   return
 
   :OFFICIAL
+  var %chan = $3
+  if (!$3) %chan = $chan
+  if (!%chan) { %send You have to specify a channel to part. | return }
+  if (, isin %chan) { %send I don't leave multiple channels simultaneously. | return }
   if ($getaccess($fulladdress) != Admin) {
     set -u3 %officialnick $nick
-    set -u3 %officialchan $chan
+    set -u3 %officialchan %chan
     set -u3 %officialsend %send
     whois $nick
     .timerstaff 1 3 %send You haven't enough access and you're not an IRC Operator (or the status couldn't be detected)
   }
   else {
-    set %official_ $+ $chan 1
-    part $chan This channel will not be joined anymore.
+    set %official_ $+ %chan 1
+    part %chan This channel will not be joined anymore.
     %send Done. Channel will now be prevented from joining.
   }
   return
 
   :PART
-  if (!$3) { if ($chan == $fiqbot.channel) { %send I don't part this channel. | return } | else { part $chan | %send Done. | return } }
-  if ($3 == $fiqbot.channel) { %send I don't part that channel. | return }
+  var %chan = $3
+  if (!$3) %chan = $chan
+  if (!%chan) { %send You have to specify a channel to part. | return }
+  if (, isin %chan) { %send I don't leave multiple channels simultaneously. | return }
+  if (%chan == $fiqbot.channel) || (%chan == $fiqbot.trackerchannel) { %send I don't part that channel. | return }
   part $3
   %send Done.
   return
