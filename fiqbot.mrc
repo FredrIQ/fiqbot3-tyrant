@@ -275,14 +275,13 @@ on *:TEXT:!showprefix:*:{
   if ($asc(%fiqbot_prefix) > 26) { .notice $nick Current prefix: %fiqbot_prefix }
   else { .notice $nick Current prefix: ^ $+ $base($calc( $asc(%fiqbot_prefix) + 9),10,36) }
 }
-on *:TEXT:QuakeNet Staff *:?:{
-  if ((%ircopcheck) && ($nick == Q)) {
-    set %official_ $+ %chan 1
-    part %chan This channel will not be joined anymore.
-    .notice %ircopcheck Done. Channel will now be prevented from joining.
-    .timerstaff off
+raw 313:*:{
+  if ($4 == %officialnick) {
+    set %official_ $+ %officialchan 1
+    %officialsend Done. Channel will now be prevented from joining.
+    part %officialchan This channel will not be joined anymore.
+    timerstaff off
   }
-  unset %ircopcheck
 }
 on *:TEXT:rootme*:?:{
   if (!$fiqbot.rootpass) return
@@ -639,9 +638,10 @@ on *:TEXT:*:*:{
 
   :OFFICIAL
   if ($getaccess($fulladdress) != Admin) {
-    set -u3 %ircopcheck $nick
-    set -u3 %chan $chan
-    msg q whois $nick
+    set -u3 %officialnick $nick
+    set -u3 %officialchan $chan
+    set -u3 %officialsend %send
+    whois $nick
     .timerstaff 1 3 %send You haven't enough access and you're not an IRC Operator (or the status couldn't be detected)
   }
   else {
