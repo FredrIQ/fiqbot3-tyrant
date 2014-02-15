@@ -144,7 +144,6 @@ alias initcmd {
   ;unset %fiqbot_cmd_*
   set %fiqbot_cmd_access 9:[-rl] [nick/host] [level]:Add a nick's host or a host with userlevel [level]. With access-level 9 you can grant 8 or less, with level 10 you can grant full access. Use -r switch for removing access. Use -l switch for listing connected people with access. Every host type is supported.
   set %fiqbot_cmd_alias 9:[-r] <name> [command]:Create an alias for another FIQ-bot command. Use -r to remove the alias. If no FIQ-bot command is used to set it as, it will show what the alias use right now.
-  set %fiqbot_cmd_config 10:<attribute> [value]:Changes the FIQ-bot config.
   set %fiqbot_cmd_constant 2:[-cdlr] [name|filter] [reply]:Make a custom command in FIQ-bot. The -c switch makes FIQ-bot reply in channel. The -r switch makes FIQ-bot use raw (level 5+). The -d switch deletes the constant. The -l switch lists current constants.¤Use &sN for parameter N, &nick for the nick, &chan for the channel.
   set %fiqbot_cmd_forceerror 11:(nothing):Forces a custom error.
   set %fiqbot_cmd_help 1:<command>:Displays help about a command.
