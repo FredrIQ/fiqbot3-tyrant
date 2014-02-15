@@ -138,10 +138,16 @@ alias initcmd {
     set %fiqbot_prefix !
     set %fiqbot_access_local 12
   }
+  var %i = 1
+  while ($var(fiqbot_cmd_*,%i)) {
+    if (!$gettok($(,$var(fiqbot_cmd_*,%i)),4,58)) {
+      unset $var(fiqbot_cmd_*,%i)
+    }
+    inc %i
+  }
   ;
   ;Generic commands
   ;
-  ;unset %fiqbot_cmd_*
   set %fiqbot_cmd_access 9:[-rl] [nick/host] [level]:Add a nick's host or a host with userlevel [level]. With access-level 9 you can grant 8 or less, with level 10 you can grant full access. Use -r switch for removing access. Use -l switch for listing connected people with access. Every host type is supported.
   set %fiqbot_cmd_alias 9:[-r] <name> [command]:Create an alias for another FIQ-bot command. Use -r to remove the alias. If no FIQ-bot command is used to set it as, it will show what the alias use right now.
   set %fiqbot_cmd_constant 2:[-cdlr] [name|filter] [reply]:Make a custom command in FIQ-bot. The -c switch makes FIQ-bot reply in channel. The -r switch makes FIQ-bot use raw (level 5+). The -d switch deletes the constant. The -l switch lists current constants.¤Use &sN for parameter N, &nick for the nick, &chan for the channel.
@@ -189,15 +195,26 @@ alias initcmd {
   set %fiqbot_cmd_startraid 11:<name/id>:Starts a raid and displays the join link.
   set %fiqbot_cmd_setauth 11:<usertarget> <userid> <account token> <flashcode>:Sets the auth data which the bot uses. <usertarget> is a specified internal user ID, the rest is self explainatory.
   set %fiqbot_cmd_setfaction 11:<usertarget> <faction ID> <faction points> <faction name>:Updates faction info for <usertarget> (internal account ID)
-  set %fiqbot_cmd_targets 1:[#channel] [reset|ignore [factions]|infamy|upcoming [1-6]]:Displays valid war targets for specified faction excluding those with infamy. Use [#channel] to check targets for that channel's faction.¤ $&
-    Parameters are [ignore] - changes the factions not to show list no matter what, [infamy] - forces showing of factions with infamy (with infamy count shown if relevant).¤ $&
-    [upcoming] - shows upcoming targets opening the coming 1-6h (default 2h), [reset] - reloads target list, useful during faction change (requires level 3+).
+  set %fiqbot_cmd_targets 1:[#channel] [reset|ignore [factions]|upcoming [1-6]]:Displays valid war targets for specified faction excluding those with infamy. Use [#channel] to check targets for that channel's faction.¤ $&
+    Parameters are [ignore] - changes the factions not to show list no matter what, [upcoming] - shows upcoming targets opening the coming 1-6h (default 2h),¤ $&
+    [reset] - reloads target list, useful during faction change (requires level 3+).
   set %fiqbot_cmd_tiles 1:[#channel] [coordinates] [faction]:Displays tile information for [faction]. If no faction is specified, display tile information for the faction assigned to current channel, or [#channel].¤ $&
     Use [coordinates] (in "12E,3N" format) to display detailed info about the given tile, and, if a channel assigned faction is used, amount of decks and if relevant, current invasion data. [faction] overrides [#channel] faction info.
   set %fiqbot_cmd_tracker 3:<on/off>:Enables BaNaNa-like player activity tracking.
   set %fiqbot_cmd_vault 1:[cards|current|reset]:Displays cards in the vault rotation. If [cards] are given, will set vault alert in-channel for specified cards when they hit vault, [current] shows current vault alerts, [reset] removes vault alerts.
   set %fiqbot_cmd_war 1:[#channel]:Displays simple information about on going wars. Use [#channel] to check targets for that channel's faction.
   set %fiqbot_cmd_warlog 1:[#channel] [amount] [faction]:Displays old wars, up to [amount]. [faction] limits it to only display wars against that faction. Use [#channel] to check targets for that channel's faction.
+
+  var %i = 1, %cmd
+  while ($var(fiqbot_cmd_*,%i)) {
+    if ($gettok($(,$var(fiqbot_cmd_*,%i)),4,58)) {
+      %cmd = $gettok($(,$var(fiqbot_cmd_*,%i)),4,58)
+      if (!%fiqbot_cmd_ [ $+ [ %cmd ] ]) {
+        unset $var(fiqbot_cmd_*,%i)
+      }
+    }
+    inc %i
+  }
   ;
   ;Random stuff
   ;
@@ -211,6 +228,12 @@ alias initcmd {
     %send Loading Tyrant scripts...
     load -rs $+($scriptdir,tyrant-resources.mrc)
     load -rs $+($scriptdir,tyrant-tasks.mrc)
+  }
+  else {
+    reload -rs $+($scriptdir,fiqbot.mrc)
+    reload -rs $+($scriptdir,fiqbot-config.mrc)
+    reload -rs $+($scriptdir,tyrant-resources.mrc)
+    reload -rs $+($scriptdir,tyrant-tasks.mrc)
   }
   %send Loaded FIQ-bot version $fiqbot.version
 }
@@ -1471,9 +1494,6 @@ on *:TEXT:*:*:{
       %send You may only request upcoming target openings for 1-6h from now.
       return
     }
-  }
-  if ($3 == infamy) {
-    %showinfamy = $true
   }
   if ($3 == reset) {
     if (%access < 3) {
