@@ -855,7 +855,7 @@ on *:sockread:tyranttask*:{
     if (%headers_completed == 1) %send User %usertarget :: %temp
     goto done
     :CHECKCONQUESTMAP
-    var %id, %x, %y, %owner_id, %owner_name, %attacker_id, %attacker_name, %attacker_start, %attacker_end, %cr, %protection_end, %bg
+    var %id, %x, %y, %owner_id, %owner_name, %attacker_id, %attacker_name, %attacker_start, %attacker_end, %cr, %protection_end, %bg, %nextid
     var %atk_check, %bg_check, %id_check
     var %trackerchannel = $fiqbot.tyrant.trackerchannel
     var %cqinfo = msg $fiqbot.tyrant.trackerchannel [CONQUEST]
@@ -864,6 +864,8 @@ on *:sockread:tyranttask*:{
     tokenize 44 %temp
     %counter = 0
     %first = %metadata1
+    %nextid = $hget(conquest,nextid)
+    if (!%nextid) %nextid = 0
     while ($18) {
       inc %counter 17
       if (%first) {
@@ -939,6 +941,10 @@ on *:sockread:tyranttask*:{
         %bg = 0
       }
 
+      if (%nextid <= %id) {
+        %nextid = %id + 1
+        hadd conquest nextid %nextid
+      }
       if ($hget(conquest,$+(cr,%id))) {
         var %h.owner = $hget(conquest,$+(owner_id,%id))
         var %h.ownername = $hget(conquest,$+(owner_name,%id))
@@ -1011,6 +1017,10 @@ on *:sockread:tyranttask*:{
         hadd conquest $+(cr,%id) %cr
         hadd conquest $+(bg,%id) %bg
       }
+      if (!$hget(conquest,$+(id,%x,_,%y))) {
+        hadd conquest $+(id,%x,_,%y) %id
+      }
+      
 
       tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ %counter,44)))
     }
