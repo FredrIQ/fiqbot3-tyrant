@@ -178,6 +178,7 @@ alias initcmd {
   set %fiqbot_cmd_clientcode 11:[new code]:Displays or set the assigned client code. If no code is set, or the code turns out to be incorrect, FIQ-bot will force a new code on a query by running "init".
   set %fiqbot_cmd_conquestdebug 11:(nothing):Conquest debug log (output in status window)
   set %fiqbot_cmd_faction 1:[-l] <name or ID>:Displays some information about the faction.
+  set %fiqbot_cmd_factionchat 3:[#channel] [on|off]:Turns faction chat announcing on or off for the current channel or [#channel].
   set %fiqbot_cmd_factionchannel 11:[#channel] [internal account ID|reset] [nouser]:Shows, changes or removes a faction's account assign used. [nouser] means that the bot will ignore the fact that there's no user with that internal ID.
   set %fiqbot_cmd_getid 1:<nick>:Displays user ID for specified nick.
   set %fiqbot_cmd_hash 1:[add <deckname>/del/list] <deckname/cardlist/hash>:Displays the deck hash of the given cardlist, or a cardlist if the input was a deck hash. Add/del/list manages saved decks.
@@ -904,7 +905,37 @@ on *:TEXT:*:*:{
   fiqbot.tyrant.login 2
   fiqbot.tyrant.showfaction %id
   return
-
+  
+  :FACTIONCHAT
+  var %chan = $chan
+  if ($left($3,1) == $#) {
+    var %chan = $3
+    tokenize 32 $1-2 $4-
+    if (%access < 5) && ($nick !ison %chan) {
+      %send You're not in %chan and don't have sufficient access to check unless you're in the channel.
+      return
+    }
+  }
+  var %factionuser = %fiqbot_tyrant_factionchannel_ [ $+ [ %chan ] ]
+  if (!%factionuser) {
+    %send There's currently no faction assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    return
+  }
+  if (!%fiqbot_tyrant_userid [ $+ [ %factionuser ] ]) {
+    %send There's currently no account assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    return
+  }
+  
+  if (!$3) {
+    %send Faction chat relay is currently $iif(%fiqbot_tyrant_chat_ [ $+ [ %factionuser ] ],on,off)
+    return
+  }
+  if ($3 != on) && ($3 != off) { fiqbot.usage $2 $chan | return }
+  unset %fiqbot_tyrant_chat_ [ $+ [ %factionuser ] ]
+  if ($3 == on) set %fiqbot_tyrant_chat_ [ $+ [ %factionuser ] ] 1
+  %send Done. Faction chat relay is currently $iif(%fiqbot_tyrant_chat_ [ $+ [ %factionuser ] ],on,off)
+  return
+  
   :FACTIONCHANNEL
   var %chan, %removing
   %chan = $chan

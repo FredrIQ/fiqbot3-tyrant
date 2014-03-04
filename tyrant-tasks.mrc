@@ -315,12 +315,19 @@ alias fiqbot.tyrant.updatefactioninfo {
   while (%fiqbot_tyrant_userid [ $+ [ %i ] ]) {
     if (%fiqbot_tyrant_fname [ $+ [ %i ] ]) && (!%bruteforcing [ $+ [ %i ] ]) {
       
+      ;Faction chat
+      fiqbot.tyrant.checkfactionchat %i %last.post.id. [ $+ [ %i ] ]
+      
       ;Member tracking
       fiqbot.tyrant.checkfactionmembers %i
       
       ;Unfinished, for CQ assist
       ;fiqbot.tyrant.checkinvasion %i
+      
+      ;For updating of target lists
       fiqbot.tyrant.checktargets %i
+      
+      ;Check new wars
       fiqbot.tyrant.checkwars %i
     }
     inc %i
@@ -369,6 +376,16 @@ alias fiqbot.tyrant.checkconquestmap {
   set -u0 %task checkconquestmap
   set -u0 %msg getConquestMap
   set -u0 %metadata1 2
+  fiqbot.tyrant.runsocket
+}
+alias fiqbot.tyrant.checkfactionchat {
+  if (!%fiqbot_tyrant_chat_ [ $+ [ $1 ] ]) return
+  set -u0 %send echo -s factionchatchecking:
+  fiqbot.tyrant.login $1
+  unset %params
+  if ($2) set -u0 %params last_post= $+ $2
+  set -u0 %task checkfactionchat
+  set -u0 %msg getNewFactionMessages
   fiqbot.tyrant.runsocket
 }
 alias fiqbot.tyrant.checkfactionmembers {
@@ -1027,6 +1044,10 @@ on *:sockread:tyranttask*:{
     %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
     hadd socketdata $+(temp,%sockid) %temp
     goto done
+    :CHECKFACTIONCHAT
+    tokenize 44 %temp
+    set %fm.message. $+ %usertarget $+ . $+ %headers_completed %temp
+    goto done
     :CHECKFACTIONMEMBERS
     var %id, %level, %name, %faction_id, %applicant, %rank, %active, %lp, %cq_claimed, %items, %spam_counter
     var %trackerchannel = $fiqbot.tyrant.trackerchannel
@@ -1627,6 +1648,33 @@ on *:sockclose:tyranttask*:{
   echo -s --------------- EOF ---------------
   return
 
+  :CHECKFACTIONCHAT
+  var %l.count = 1
+  var -n %pos.end = }],"time":
+  var -n %pos.endline = "},{"
+  var -n %pos.nomessage = {"messages":[],"time":
+  var -n %temp.f = %fm.message. [ $+ [ $+(%usertarget,.,%l.count) ] ]
+  var -n %pos.f = $pos(%temp.f,"faction_id":",1)
+  while (!%pos.e) {
+    if ($pos(%temp.f,%pos.nomessage,1)) return 
+    if (%fm.message. [ $+ [ $+(%usertarget,.,$calc(%l.count + 1)) ] ]) && ($len(%temp.f) <= 315) { var %temp.f = %temp.f $+ %fm.message. [ $+ [ $+(%usertarget,.,$calc(%l.count +1)) ] ] | inc %l.count } 
+    var -n %pos.f = $pos(%temp.f,"faction_id":",1)
+    var -n %pos.p = $pos(%temp.f,"post_id":",1)
+    var -n %pos.m = $pos(%temp.f,"message":",1)
+    var -n %pos.t = $pos(%temp.f,"time":",1)
+    var -n %pos.u = $pos(%temp.f,"user_id":",1)
+    var -n %pos.eol = $pos(%temp.f,%pos.endline,1)
+    if (!%pos.eol) var -n %pos.e = $pos(%temp.f,%pos.end,1)
+    ;List of positions
+    ;faction: $mid(%temp.f,$calc(%pos.f +14),$calc(%pos.p - %pos.f -16)) Postid: $mid(%temp.f,$calc(%pos.p +11),$calc(%pos.m - %pos.p -13)) message: $remove($mid(%temp.f,$calc(%pos.m +11),$calc(%pos.t - %pos.m -13)),\) time: $mid(%temp.f,$calc(%pos.t +8),$calc(%pos.u - %pos.t -10)) userid: $iif($hget(users,name $+ $mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12)))),$ifmatch,$mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12)))))
+    var -n %x = [FACTIONCHAT] $iif($hget(users,name $+ $mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12)))),$ifmatch,$mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12))))) $+ $chr(58) $remove($mid(%temp.f,$calc(%pos.m +11),$calc(%pos.t - %pos.m -13)),\) 
+    if (last_post= isin %params) && (%pos.f) queue msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] %x 
+    if (%pos.eol) var %temp.f = $remove(%temp.f,$left(%temp.f,$calc(%pos.eol +3)))
+  }
+  if ($mid(%temp.f,$calc(%pos.p +11),$calc(%pos.m - %pos.p -13)) isnum) set %last.post.id. $+ %usertarget $mid(%temp.f,$calc(%pos.p +11),$calc(%pos.m - %pos.p -13))
+  unset %fm.*
+  return
+  
   :SHOWPLAYER
   var %p_id = %user
   set -l %buffer %p_name (Level %p_level $+ , $+(%p_xp,XP) $+ )
