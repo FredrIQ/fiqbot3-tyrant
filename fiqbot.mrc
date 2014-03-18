@@ -1029,10 +1029,11 @@ on *:TEXT:*:*:{
     tokenize 32 $1-2 %fiqbot_tyrant_deckhash_ [ $+ [ $+($chan,_,$3) ] ]
     %is_saved = $true
   }
-  var %amount2, %commander, %commanderfail, %commanderselected, %dehash, %str, %pattern, %id, %buffer, %invalidbuffer, %amount, %chr, %increment, %name, %first, %realname, %card, %oldrealname
+  var %amount2, %commander, %commanderfail, %commanderselected, %dehash, %str, %pattern, %id, %buffer, %invalidbuffer, %amount, %chr, %increment, %name, %first, %realname, %card, %oldrealname, %cards_total
   var %list = $3-
   tokenize 44 $3-
   %dehash = $true
+  %cards_total = 0
   var %card = $remove($replace($1,*,+),$chr(32))
   if (*[*] iswm %card) {
     %card = $+(a,%card)
@@ -1047,7 +1048,8 @@ on *:TEXT:*:*:{
     var %i = 1
     %first = $true
     %amount2 = 0
-    while (%i <= $len(%str)) {
+    while (%i <= $len(%str)) && (%cards_total < 16) {
+      inc %cards_total
       %id = 0
       %pattern = $mid(%str,%i,2)
       if ($left(%pattern,1) == -) {
@@ -1128,6 +1130,9 @@ on *:TEXT:*:*:{
       inc %i 2
     }
     if ((%buffer) || (%invalidbuffer)) {
+      if (%cards_total == 16) {
+        %send (Limited to 16 cards)
+      }
       if (!%aliaschange) {
         if (%is_saved) %buffer = Data from saved deck: %str ( $+ %buffer $+ )
         if (%invalidbuffer) %buffer = %buffer $iif(%buffer,::) Invalid card IDs in hash: %invalidbuffer
@@ -1150,7 +1155,8 @@ on *:TEXT:*:*:{
   var %i = 0
   var %j, %foundcard
   var %converted
-  while (%i < $0) {
+  while (%i < $0) && (%cards_total < 16) {
+    inc %cards_total
     inc %i
     %foundcard = $false
     %j = $0
@@ -1216,6 +1222,9 @@ on *:TEXT:*:*:{
     elseif (%pattern2 == 62) %pattern2 = +
     else %pattern2 = /
     %buffer = $+(%buffer,%pattern2,%pattern,%amounthash)
+  }
+  if (%cards_total == 16) {
+    %send (Limited to 16 cards)
   }
   if (%converted) {
     %send Converted the following IDs: %converted
