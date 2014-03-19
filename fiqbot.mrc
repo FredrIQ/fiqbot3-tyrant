@@ -148,7 +148,7 @@ alias initcmd {
   ;
   ;Generic commands
   ;
-  set %fiqbot_cmd_access 9:[-rl] [nick/host] [level]:Add a nick's host or a host with userlevel [level]. With access-level 9 you can grant 8 or less, with level 10 you can grant full access. Use -r switch for removing access. Use -l switch for listing connected people with access. Every host type is supported.
+  set %fiqbot_cmd_access 1:[-rl] [nick/host] [level]:Add a nick's host or a host with userlevel [level]. With access-level 9 you can grant 8 or less, with level 10 you can grant full access. Use -r switch for removing access. Use -l switch for listing connected people with access. Every host type is supported.
   set %fiqbot_cmd_alias 9:[-r] <name> [command]:Create an alias for another FIQ-bot command. Use -r to remove the alias. If no FIQ-bot command is used to set it as, it will show what the alias use right now.
   set %fiqbot_cmd_constant 2:[-cdlr] [name|filter] [reply]:Make a custom command in FIQ-bot. The -c switch makes FIQ-bot reply in channel. The -r switch makes FIQ-bot use raw (level 5+). The -d switch deletes the constant. The -l switch lists current constants.¤Use &sN for parameter N, &nick for the nick, &chan for the channel.
   set %fiqbot_cmd_forceerror 11:(nothing):Forces a custom error.
@@ -203,7 +203,7 @@ alias initcmd {
     Use [coordinates] (in "12E,3N" format) to display detailed info about the given tile, and, if a channel assigned faction is used, amount of decks and if relevant, current invasion data. [faction] overrides [#channel] faction info.
   set %fiqbot_cmd_tracker 3:<on/off>:Enables BaNaNa-like player activity tracking.
   set %fiqbot_cmd_vault 1:[cards|current|reset]:Displays cards in the vault rotation. If [cards] are given, will set vault alert in-channel for specified cards when they hit vault, [current] shows current vault alerts, [reset] removes vault alerts.
-  set %fiqbot_cmd_war 1:[#channel]:Displays simple information about on going wars. Use [#channel] to check targets for that channel's faction.
+  set %fiqbot_cmd_war 1:[#channel] [id] [player]:Displays information about on going wars. Use [#channel] to check targets for that channel's faction. Use [id] to check out on a specific war. You can then specify [player] to look specifically for one player on either side.
   set %fiqbot_cmd_warlog 1:[#channel] [amount] [faction]:Displays old wars, up to [amount]. [faction] limits it to only display wars against that faction. Use [#channel] to check targets for that channel's faction.
 
   var %i = 1, %cmd
@@ -435,19 +435,21 @@ on *:TEXT:*:*:{
     return
   }
   if (!$4) { tokenize 32 a whois $3 | goto whois }
+  if (%access < 3) { %send You can only change people's access level at access level 3+ | return }
   if ($address($3,2)) { var %targethost = $address($3,2) }
   else var %targethost = $3
   if (*!*@* !iswm %host) { %send Invalid host. | return }
   var %hostaccess = $getaccess(%targethost).num
   if (. isin $4 || $4 !isnum) { %send Level must be a number. | return }
-  if (%hostaccess > %access) || (%hostaccess > 10) { %send You cannot change access for people with access $getaccess(%targethost) | return }
+  if (%hostaccess >= %access) && (%access < 10) && (%targethost !iswm $fulladdress) || (%hostaccess > 10) { %send You cannot change access for people with access $getaccess(%targethost) | return }
   else { var %give = $4 }
   if (%give > 10) { var %give = 10 }
-  if (%access == 9) && (%give > 8) { var %give = 8 }
+  if (%access < 10) && (%give > $calc( %access - 1 )) && ((%targethost !iswm $fulladdress) && (%access == %give)) { var %give = $calc( %access - 1 ) }
+  if (%access < 10) && (%give < 1) { %give = 1 }
   set %fiqbot_access_ [ $+ [ %targethost ] ] %give | write access_log.txt $nick $+ : $+ $fulladdress $+ : $+ $4 $+ : $+ %give $+ : $+ %targethost $+ : $+ $iif($ial(%targethost,1),$ial(%targethost,1),NOT_FOUND) | %send Done. Current access for $3 $+ : $getaccess(%targethost)
   getaccess.clear
   return
-
+  
   :ALIAS
   if ((!$3) || (($3 == -r) && (!$4))) { fiqbot.usage $2 $chan | return }
   if ($3 == -r) {
