@@ -440,13 +440,19 @@ on *:TEXT:*:*:{
   else var %targethost = $3
   if (*!*@* !iswm %host) { %send Invalid host. | return }
   var %hostaccess = $getaccess(%targethost).num
+  if (%hostaccess < 1) %hostaccess = 10
   if (. isin $4 || $4 !isnum) { %send Level must be a number. | return }
   if (%hostaccess >= %access) && (%access < 10) && (%targethost !iswm $fulladdress) || (%hostaccess > 10) { %send You cannot change access for people with access $getaccess(%targethost) | return }
   else { var %give = $4 }
   if (%give > 10) { var %give = 10 }
-  if (%access < 10) && (%give > $calc( %access - 1 )) && ((%targethost !iswm $fulladdress) && (%access == %give)) { var %give = $calc( %access - 1 ) }
+  if (%access < 10) && (%give >= %access) {
+    %give = %access
+    if (%targethost !iswm $fulladdress) dec %give
+  }
   if (%access < 10) && (%give < 1) { %give = 1 }
-  set %fiqbot_access_ [ $+ [ %targethost ] ] %give | write access_log.txt $nick $+ : $+ $fulladdress $+ : $+ $4 $+ : $+ %give $+ : $+ %targethost $+ : $+ $iif($ial(%targethost,1),$ial(%targethost,1),NOT_FOUND) | %send Done. Current access for $3 $+ : $getaccess(%targethost)
+  set %fiqbot_access_ [ $+ [ %targethost ] ] %give
+  write access_log.txt $nick $+ : $+ $fulladdress $+ : $+ $4 $+ : $+ %give $+ : $+ %targethost $+ : $+ $iif($ial(%targethost,1),$ial(%targethost,1),NOT_FOUND)
+  %send Done. Current access for $3 $+ : $getaccess(%targethost)
   getaccess.clear
   return
   
