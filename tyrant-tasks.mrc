@@ -193,6 +193,16 @@ alias fiqbot.tyrant.downloadfactions {
   }
   fiqbot.tyrant.checkfactionname %fiqbot_tyrant_currentfaction
 }
+alias fiqbot.tyrant.energy {
+  var %max_time = $1, %cap = $2
+  var %max_time = %max_time - $ctime
+  if (%max_time < 0) %max_time = 0
+  var %current_use = %max_time / 60
+  %current_use = %cap - %current_use
+  %current_use = $round(%current_use,0)
+  if ($prop == showcap) return $+(%current_use,/,%cap)
+  return %current_use
+}
 alias fiqbot.tyrant.factionrank {
   if ($1 == 0) return Applicant
   if ($1 == 1) return Member
@@ -327,6 +337,9 @@ alias fiqbot.tyrant.updatefactioninfo {
       ;For updating of target lists
       fiqbot.tyrant.checktargets %i
       
+      ;War tracking
+      ;fiqbot.tyrant.checkwarinfo %i
+      
       ;Check new wars
       fiqbot.tyrant.checkwars %i
     }
@@ -440,9 +453,28 @@ alias fiqbot.tyrant.checkvault {
   set -u0 %msg getMarketInfo
   fiqbot.tyrant.runsocket
 }
-alias fiqbot.tyrant.checkwars {
-  set -u0 %send echo -s warschecking:
+alias fiqbot.tyrant.checkwarinfo {
+  var %user_faction = %fiqbot_tyrant_fid [ $+ [ $1 ] ]
   fiqbot.tyrant.login $1
+  if (!$hget(wars,$+(nextid,%user_faction))) return
+  
+  set -u0 %send echo -s warinfochecking:
+  var %i = $hget(wars,$+(start,%user_faction))
+  while (%i < $hget(wars,$+(nextid,%user_faction))) {
+    var %id = $hget(wars,$+(id_,%user_faction,_,%i))
+    set -u0 %task checkwarinfo
+    set -u0 %msg getFactionWarInfo
+    set -u0 %params $+(faction_war_id=,%id)
+    fiqbot.tyrant.runsocket
+    set -u0 %task checkwarrankings
+    set -u0 %msg getFactionWarRankings
+    fiqbot.tyrant.runsocket
+    inc %i
+  }
+}
+alias fiqbot.tyrant.checkwars {
+  fiqbot.tyrant.login $1
+  set -u0 %send echo -s warschecking:
   set -u0 %task checkwars
   set -u0 %msg getActiveFactionWars
   fiqbot.tyrant.runsocket
@@ -473,7 +505,7 @@ alias fiqbot.tyrant.raidinfo {
 alias fiqbot.tyrant.retrysocket {
   if ($2 == needlock) set -u0 %needlock $true
   fiqbot.tyrant.setsocketvars $1
-  echo -s [retrysocket] informative stuff: user %usertarget task %task msg %msg params %params
+  echo -s [retrysocket] user %usertarget clientcode %clientcode task %task msg %msg params %params
   fiqbot.tyrant.runsocket $1
 }
 alias fiqbot.tyrant.runkongsocket {
@@ -794,6 +826,7 @@ on *:sockread:tyranttask*:{
     if ($left(%temp,21) == {"duplicate_client":1) && (!%noreidentify) {
       var %clientcode = %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
       if (!%bruteforcing [ $+ [ %usertarget ] ]) {
+        echo -s [reidentify] started!
         %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] = 0
         set %bruteforcing [ $+ [ %usertarget ] ] %sockid
         hadd socketdata $+(bruteforcing,%sockid) %sockid
@@ -807,6 +840,7 @@ on *:sockread:tyranttask*:{
         return
       }
       inc %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
+      echo -s [reidentify] attempted code %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ]
       if (%forcedcode [ $+ [ %usertarget ] ]) %fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] = %clientcode
       if (%fiqbot_tyrant_clientcode [ $+ [ %usertarget ] ] > 1000) {
         echo -s [API warning] Failed to re-identify (did you refresh page twice?)! Re-trying...
@@ -1151,6 +1185,11 @@ on *:sockread:tyranttask*:{
         hadd userdata $+(name,%id) %name
         hadd userdata $+(level,%id) %level
         hadd userdata $+(faction,%id) %faction_id
+        var %stamina = $hget(userdata,$+(stamina,%id))
+        if (!%stamina) {
+          %stamina = $ctime
+          hadd userdata $+(stamina,%id) %stamina
+        }
 
         hadd userdata $+(usercheck,%idx) %usercheck
         hadd userdata $+(member_until,%idx) $ctime
@@ -1262,6 +1301,12 @@ on *:sockread:tyranttask*:{
       }
       tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ $calc(5 * %targetcounter),44)))
     }
+    goto done
+    
+    :CHECKWARINFO
+    goto done
+    
+    :CHECKWARRANKINGS
     goto done
 
     :SHOWFACTION
@@ -1560,11 +1605,13 @@ on *:sockread:tyranttask*:{
     var %noalert_settings = %fiqbot_tyrant_noalert_ [ $+ [ %chan ] ]
     if (!%noalert_settings) %noalert_settings = %fiqbot_tyrant_noalert
     if (%noalert_settings == global) return
+    var %user_faction = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
     %first = $true
     while ($10) {
       inc %warcounter
       if (%first) %id = $noqt($gettok($1,4,58))
       else %id = $noqt($gettok($1,3,58))
+      var %idx = $+(_,%user_faction,_,%id)
       %first = $false
       %wars = $true
       %off_id = $noqt($gettok($2,2,58))
@@ -1583,14 +1630,22 @@ on *:sockread:tyranttask*:{
       if (- !isin %diff) %diff = + $+ %diff
       if (!%opponent) {
         if (%task == showwars) %send No wars!
-        if ($hget(wars,detected)) {
-          hfree wars
-          hmake wars 10
-        }
         return
       }
       if (%task == showwars) %send %id :: $+(%friend,-,%opponent) :: $+(%atk,-,%def) ( $+ %diff $+ ) :: %end
-      elseif (!$hget(wars,%id)) {
+      elseif (!$hget(wars,$+(pointer,%idx))) {
+        var %nextid = $hget(wars,$+(nextid,%user_faction))
+        if (!%nextid) {
+          hadd wars $+(start,%user_faction) 1
+          %nextid = 1
+          hadd wars $+(nextid,%user_faction) %nextid
+        }
+        hinc wars $+(nextid,%user_faction)
+        
+        var %nextidx = $+(_,%user_faction,_,%nextid)
+        hadd wars $+(pointer,%idx) %nextid
+        hadd wars $+(id,%nextidx) %id
+
         var %buffer, %nick
         var %i = 0
         while ((%noalert_settings != highlights) && (%i < $nick(%chan,0))) {
@@ -1603,7 +1658,6 @@ on *:sockread:tyranttask*:{
         }
         msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] New war started! %id :: $+(%friend,-,%opponent) :: $+(%atk,-,%def) ( $+ %diff $+ ) :: %end %buffer
         hadd wars %id 1
-        hadd wars detected 1
       }
       tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ $calc(15 * %warcounter),44)))
     }
@@ -1721,6 +1775,7 @@ on *:sockclose:tyranttask*:{
     %lp = $hget(userdata,$+(lp,%idx))
     %cq_claimed = $hget(userdata,$+(cq_claimed,%idx))
     %member_until = $hget(userdata,$+(member_until,%idx))
+    %stamina = $hget(userdata,$+(stamina,%id))
 
     %ctime_days = $int($calc($ctime / 86400))
     %active = %ctime_days - %active
@@ -1728,6 +1783,7 @@ on *:sockclose:tyranttask*:{
     else %active = $+(%active,d ago)
 
     if (%usercheck_faction == %usercheck_player) {
+      %buffer = Stamina: $fiqbot.tyrant.energy(%stamina,300).showcap
       %buffer = Last active: %active
       %buffer = %buffer :: Tokens last claimed: $fiqbot.tyrant.duration($calc($ctime - %cq_claimed)) ago
     }

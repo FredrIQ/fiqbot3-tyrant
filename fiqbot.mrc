@@ -1269,6 +1269,7 @@ on *:TEXT:*:*:{
   set -u5 %killsockets 1
   unset %needlock
   unset %fiqbot_tyrant_socklock
+  unset %forcedcode*
   unset %bruteforcing*
   hfree socketdata
   fiqbot.tyrant.init
