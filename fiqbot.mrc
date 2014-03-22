@@ -1259,9 +1259,10 @@ on *:TEXT:*:*:{
     sockclose $sock(*,%i)
     inc %i
   }
-  unset %killsockets
+  set -u5 %killsockets 1
   unset %needlock
   unset %fiqbot_tyrant_socklock
+  unset %bruteforcing*
   hfree socketdata
   fiqbot.tyrant.init
 
