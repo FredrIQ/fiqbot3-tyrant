@@ -133,7 +133,14 @@ alias getaccess.clear {
 }
 alias initcmd {
   if (!%send) set -u0 %send echo -ag
-  if ((($1 == -in-channel) && ($2 == Y)) || (($1 != -in-channel) && ($?!="Do you want to unload all FIQ-bot variables?"))) {
+  var %reset = $false
+  if (($1 == -in-channel) && ($2 == Y)) {
+    %reset = $true
+  }
+  elseif (!%fiqbot_prefix) || (($1 != -in-channel) && ($?!="Do you want to unload all FIQ-bot variables?")) {
+    %reset = $true
+  }
+  if (%reset) {
     unset %fiqbot*
     set %fiqbot_prefix !
     set %fiqbot_access_local 12
@@ -222,8 +229,8 @@ alias initcmd {
   if (!%fiqbot_prefix) set %fiqbot_prefix !
   set %fiqbot_access_local 12
   if ($1 == -in-channel) { if ($2 == Y) { set %fiqbot_access_ $+ $address($3,2) 10 } }
-  else { set %fiqbot_access_*!*@ $+ $?="Enter the auth you want to give max-access to" $+ .users.quakenet.org 10 }
-  if ($1 == -in-channel) && ($2 == Y) || ($1 != -in-channel) {
+  elseif (%reset) { set %fiqbot_access_*!*@ $+ $?="Enter the auth you want to give max-access to" $+ .users.quakenet.org 10 }
+  if (%reset) {
     %send Loading configuration...
     load -rs $+($scriptdir,fiqbot-config.mrc)
     %send Loading Tyrant scripts...
