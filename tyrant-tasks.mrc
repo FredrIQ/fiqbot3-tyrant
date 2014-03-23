@@ -1657,7 +1657,6 @@ on *:sockread:tyranttask*:{
           var %buffer = %buffer $nick(%fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ],%i)
         }
         msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] New war started! %id :: $+(%friend,-,%opponent) :: $+(%atk,-,%def) ( $+ %diff $+ ) :: %end %buffer
-        hadd wars %id 1
       }
       tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ $calc(15 * %warcounter),44)))
     }
