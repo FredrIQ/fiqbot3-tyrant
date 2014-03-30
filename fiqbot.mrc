@@ -244,9 +244,15 @@ alias initcmd {
     reload -rs $qt($+($scriptdir,tyrant-tasks.mrc))
   }
   if (!$isalias(fiqbot.tyrant.version)) {
-    %send Error: Failed to load scripts from directory: $scriptdir :: Retrying...
+    %send Error: Failed to load config from directory: $scriptdir :: Retrying...
     load -rs $qt($+($scriptdir,fiqbot-config.mrc))
+  }
+  if (!$isalias(fiqbot.tyrant.downloadxml)) {
+    %send Error: Failed to load xml downloader from directory: $scriptdir :: Retrying...
     load -rs $qt($+($scriptdir,tyrant-resources.mrc))
+  }
+  if (!$isalias(fiqbot.tyrant.login)) {
+    %send Error: Failed to load tyrant comm from directory: $scriptdir :: Retrying...
     load -rs $qt($+($scriptdir,tyrant-tasks.mrc))
   }
   %send Loaded FIQ-bot version $fiqbot.version
