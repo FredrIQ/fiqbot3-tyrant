@@ -232,16 +232,22 @@ alias initcmd {
   elseif (%reset) { set %fiqbot_access_*!*@ $+ $?="Enter the auth you want to give max-access to" $+ .users.quakenet.org 10 }
   if (%reset) {
     %send Loading configuration...
-    load -rs $+($scriptdir,fiqbot-config.mrc)
+    load -rs $qt($+($scriptdir,fiqbot-config.mrc))
     %send Loading Tyrant scripts...
-    load -rs $+($scriptdir,tyrant-resources.mrc)
-    load -rs $+($scriptdir,tyrant-tasks.mrc)
+    load -rs $qt($+($scriptdir,tyrant-resources.mrc))
+    load -rs $qt($+($scriptdir,tyrant-tasks.mrc))
   }
   else {
-    reload -rs $+($scriptdir,fiqbot.mrc)
-    reload -rs $+($scriptdir,fiqbot-config.mrc)
-    reload -rs $+($scriptdir,tyrant-resources.mrc)
-    reload -rs $+($scriptdir,tyrant-tasks.mrc)
+    reload -rs $qt($+($scriptdir,fiqbot.mrc))
+    reload -rs $qt($+($scriptdir,fiqbot-config.mrc))
+    reload -rs $qt($+($scriptdir,tyrant-resources.mrc))
+    reload -rs $qt($+($scriptdir,tyrant-tasks.mrc))
+  }
+  if (!$isalias(fiqbot.tyrant.version)) {
+    %send Error: Failed to load scripts from directory: $scriptdir :: Retrying...
+    load -rs $qt($+($scriptdir,fiqbot-config.mrc))
+    load -rs $qt($+($scriptdir,tyrant-resources.mrc))
+    load -rs $qt($+($scriptdir,tyrant-tasks.mrc))
   }
   %send Loaded FIQ-bot version $fiqbot.version
 }
