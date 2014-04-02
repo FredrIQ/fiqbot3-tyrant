@@ -137,6 +137,42 @@ alias fiqbot.tyrant.db.add {
     fiqbot.tyrant.db.update %table %id
   }
 }
+alias fiqbot.tyrant.db.repair {
+  ;repairs faction DBs corrupted by previous id erasing bug.
+  hmake factions2 1000
+  if (!%send) set -u0 %send echo -s
+  var %id = 69002
+  var %name = ???
+  while (%id < %fiqbot_tyrant_lastfaction) {
+    if (%id < 70001) inc %id
+    else inc %id 1000
+    
+    if (%id == 69177) %id = 70001
+    if (%id == 1015001) %id = 3843003
+    if (%id == 8325003) %id = 125002
+    
+    %name = $hget(factions,$+(name,%id))
+    if (!%name) %name = ???
+    hadd factions2 %id %name
+  }
+  
+  hfree factions
+  hmake factions 1000
+  var %id = 69002
+  while (%id < %fiqbot_tyrant_lastfaction) {
+    if (%id < 70001) inc %id
+    else inc %id 1000
+    
+    if (%id == 69177) %id = 70001
+    if (%id == 1015001) %id = 3843003
+    if (%id == 8325003) %id = 125002
+    
+    %name = $hget(factions2,%id)
+    if (!%name) %name = ???
+    fiqbot.tyrant.db.add factions %id %name
+  }
+  hfree factions2
+}
 alias fiqbot.tyrant.db.select {
   var %table, %name, %buffer
   %table = $1
@@ -1671,7 +1707,6 @@ on *:sockread:tyranttask*:{
   }
 
   :error
-  set -u0 %send echo @fiqbot
   if ($error) var %error = $error
   else var %error = /error: unknown error
   tokenize 40 %error
