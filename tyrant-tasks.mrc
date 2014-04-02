@@ -158,9 +158,9 @@ alias fiqbot.tyrant.db.update {
     %send [DB error] Trying to set priority status for an unknown ID in %table for: %id
     halt
   }
-  %id_move = $hget(%table,$+(id_,%name,_1))
   %name = $remove($hget(%table,$+(name,%id)),\)
   %name = $remove(%name,$chr(32))
+  %id_move = $hget(%table,$+(id_,%name,_1))
 
   var %i = 0
   while (%i < $hget(%table,$+(nextid,%name))) {
