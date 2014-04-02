@@ -34,7 +34,11 @@ alias fiqbot.mode {
   }
 }
 alias fiqbot.mode.chg {
-  if ($asc($1) == $#) tokenize 32 $fiqbot.insertNetwork($1) $2-
+  set -u0 %chanmode $false
+  echo -s testar: $2 och $fiqbot.removeNetwork($2)
+  if ($asc($fiqbot.removeNetwork($2)) == 35) {
+    %chanmode = $fiqbot.removeNetwork($2)
+  }
   set -u0 %changedmode $2
   var %i = 1
   var %modes = $fiqbot.mode($2)
@@ -48,17 +52,36 @@ alias fiqbot.mode.chg {
   var %i = 1
   while (%i <= $len(%modes)) { var %modes2 = %modes2 $+ . $+ $mid(%modes,%i,1) | inc %i }
   var %modes = $remove($sorttok(%modes2,46),.)
-  if (%modes == $fiqbot.mode($2)) { set -u1 %nochange 1 }
-  else { set %fiqbot_mode_ $+ $2 %modes }
+  var %oldmodes = $fiqbot.mode($2)
+  if (%modes == %oldmodes) { set -u1 %nochange 1 }
+  else {
+    set %fiqbot_mode_ $+ $2 %modes
+    echo -s test? %chanmode
+    if (%chanmode) {
+      if ((j isincs %modes) && (j isincs $3)) {
+        if ($me !ison %chanmode) { join %chanmode }
+        elseif (k isincs $chan(%chanmode).mode) {
+          set %fiqbot_key_ [ $+ [ $2 ] ] $gettok($chan(%chanmode).mode,2,32)
+          %send This channel has a key set. To make autojoin work properly, the channel key has been saved.
+        }
+      }
+    }
+  }
 }
 alias fiqbot.autojoin {
   var %i = 1
   while (%i <= $var(fiqbot_mode_ $+ $network $+ #*,0)) {
-    var %chan = $right($var(fiqbot_mode_ $+ $network $+ #*,%i),-13)
-    if ($fiqbot.mode(%chan,j)) { var %chanlist = $+(%chanlist,$chr(44),$fiqbot.removeNetwork(%chan)) }
+    var %chan = $+($gettok($var(fiqbot_mode_ $+ $network $+ #*,%i),3-,$asc(_)))
+    if ($fiqbot.mode(%chan,j)) {
+      ;compatibility with some networks that doesn't like empty keys (mibbit)
+      var %key = dummy
+      if (%fiqbot_key_ [ $+ [ %chan ] ]) { var %key = %fiqbot_key_ [ $+ [ %chan ] ] }
+      var %chanlist = $+(%chanlist,$chr(44),$fiqbot.removeNetwork(%chan))
+      var %keylist = $+(%keylist,$chr(44),%key)
+    }
     inc %i
   }
-  if (%chanlist) join $right(%chanlist,-1)
+  if (%chanlist) join $right(%chanlist,-1) $right(%keylist,-1)
 }
 alias fiqbot.whois {
   %send Address: $2 $chr(124) $&
@@ -669,7 +692,7 @@ on *:TEXT:*:*:{
   if (, isin $3) { %send I don't join multiple channels simultaneously. | return }
   if (%official_ [ $+ [ $gettok($3,1,44) ] ]) { %send This channel is official. The channel couldn't be joined. | return }
   set -u3 %fiqbot_joinedby $nick
-  join $gettok($3,1,44)
+  join $gettok($3,1,44) $gettok($4,1,44)
   %send Done.
   return
 
