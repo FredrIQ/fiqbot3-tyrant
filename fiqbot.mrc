@@ -191,8 +191,8 @@ alias initcmd {
   set %fiqbot_cmd_hash 1:[add <deckname>/del/list] <deckname/cardlist/hash>:Displays the deck hash of the given cardlist, or a cardlist if the input was a deck hash. Add/del/list manages saved decks.
   set %fiqbot_cmd_ison 1:<user-ID|username>:Checks whether or not an user is logged in to the game.
   set %fiqbot_cmd_killsockets 11:(nothing):Resets all Tyrant requests and reloads the socket counter.
-  set %fiqbot_cmd_noalert 1:[check|[#channel] [nick [unset]|global|highlights|unset]]:Disables war alert highlighting.¤ $&
-    Parameters are [check] - check current settings globally, for the current channel and for yourself globally and for the current channel, [nick] - disable alerts for [nick], [global] - disable alerts completely, [highlights] - keep alerts, but don't mass highlight, [unset] - unset setting.¤ $&
+  set %fiqbot_cmd_noalert 1:[check|[#channel] [nick [unset]|global|highlights|unset|reset]]:Disables war alert highlighting.¤ $&
+    Parameters are [check] - check current settings globally, for the current channel and for yourself globally and for the current channel, [nick] - disable alerts for [nick], [global] - disable alerts completely, [highlights] - keep alerts, but don't mass highlight, [reset] - unset channel/global settings, [unset] - unset setting for you or [nick].¤ $&
     Use [#channel] to disable for a specific channel, either a specific nick or globally. Setting alert status for a specific nick which isn't you requires level 4+, setting channel alert status requires level 3+.
   set %fiqbot_cmd_ownedcards 3:<name or ID>:Exports given player's owned cards to ownedcards.txt format.
   set %fiqbot_cmd_player 1:[#channel] <name or ID>:Displays some information about the player. Displays extra info if the player is, or used to be, member of a channel's faction (or [#channel]).
@@ -1317,8 +1317,9 @@ on *:TEXT:*:*:{
   var %setchannelstatus = %fiqbot_noalert [ $+ [ %setchannel ] ]
   var %nick = $false
   var %unset = $false
-  if (($3 == global) || ($3 == highlights)) {
+  if (($3 == global) || ($3 == highlights) || ($3 == reset)) {
     var %setchannelstatus = $3
+    if (%setchannelstatus == reset) %setchannelstatus = $null
     if (%access < 3) {
       %send You don't have sufficient access to manipulate channel settings
       return

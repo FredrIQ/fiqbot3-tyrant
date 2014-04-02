@@ -1640,7 +1640,7 @@ on *:sockread:tyranttask*:{
     var %chan = %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ]
     var %noalert_settings = %fiqbot_tyrant_noalert_ [ $+ [ %chan ] ]
     if (!%noalert_settings) %noalert_settings = %fiqbot_tyrant_noalert
-    if (%noalert_settings == global) return
+    if (%noalert_settings == global) && (%task == checkwars) return
     var %user_faction = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
     %first = $true
     while ($10) {
