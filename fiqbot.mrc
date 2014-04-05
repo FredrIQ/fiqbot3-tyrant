@@ -231,7 +231,7 @@ alias initcmd {
     [reset] - reloads target list, useful during faction change (requires level 3+).
   set %fiqbot_cmd_tiles 1:[#channel] [coordinates] [faction]:Displays tile information for [faction]. If no faction is specified, display tile information for the faction assigned to current channel, or [#channel].¤ $&
     Use [coordinates] (in "12E,3N" format) to display detailed info about the given tile, and, if a channel assigned faction is used, amount of decks and if relevant, current invasion data. [faction] overrides [#channel] faction info.
-  set %fiqbot_cmd_tracker 3:<on/off>:Enables BaNaNa-like player activity tracking.
+  set %fiqbot_cmd_tracker 11:<on|off|run>:Manually control FIQ-bot trackers. Parameters - on: Turn on tracking, off: Turn off tracking, run: Manually run the trackers once.
   set %fiqbot_cmd_vault 1:[cards|current|reset]:Displays cards in the vault rotation. If [cards] are given, will set vault alert in-channel for specified cards when they hit vault, [current] shows current vault alerts, [reset] removes vault alerts.
   set %fiqbot_cmd_war 1:[#channel] [id] [player]:Displays information about on going wars. Use [#channel] to check targets for that channel's faction. Use [id] to check out on a specific war. You can then specify [player] to look specifically for one player on either side.
   set %fiqbot_cmd_warlog 1:[#channel] [amount] [faction]:Displays old wars, up to [amount]. [faction] limits it to only display wars against that faction. Use [#channel] to check targets for that channel's faction.
@@ -1837,10 +1837,21 @@ on *:TEXT:*:*:{
   return
 
   :TRACKER
-  if ($3 == on) set %fiqbot_tyrant_tracker $true
-  elseif ($3 == off) set %fiqbot_tyrant_tracker $false
-  elseif ($3) { %send Invalid option. | return }
-  %send Tracking is currently $+($iif(%fiqbot_tyrant_tracker,enabled,disabled),.)
+  if ($3 == on) {
+    .timertyranttasks 0 30 fiqbot.tyrant.runinterval
+    %send Tracking enabled.
+  }
+  elseif ($3 == off) {
+    .timertyranttasks off
+    %send Tracking disabled.
+  }
+  elseif ($3 == run) {
+    fiqbot.tyrant.runinterval
+    %send Running trackers.
+  }
+  else {
+    fiqbot.tyrant.usage $2 $chan
+  }
   return
 
   :VAULT
