@@ -1605,11 +1605,11 @@ on *:TEXT:*:*:{
     return
   }
 
-  if (%target_recent) {
-    %send You requested a target list recently, please try again in $+(%target_recent,s)
+  if (%target_recent > $ctime) {
+    %send You requested a target list recently, please try again in $fiqbot.tyrant.duration($calc(%target_recent - $ctime))
     return
   }
-  set -z %target_recent 30
+  set %target_recent $ctime + 30
 
   var %suffixinfo = targets
   if (%showupcoming) %suffixinfo = targets opening in $+(%hours,h) or less
