@@ -1410,7 +1410,7 @@ on *:sockread:tyranttask*:{
       if (%timecheck == time) {
         var %idy = $+(_,%user_faction,_,%war)
         var %pointer = $hget(wars,$+(pointer,%idy))
-        if (%pointer == $hget(wars,$+(start,%user_faction))) {
+        if (%pointer == $hget(wars,$+(start,%user_faction))) && ($hget(wardata,$+(completed,%idy))) {
           hinc wars $+(start,%user_faction)
         }
       }
