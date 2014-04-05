@@ -1993,12 +1993,18 @@ on *:sockclose:tyranttask*:{
       %defstat.net = %defstat.winpts - %defstat.losspts
       if (- !isin %net) %net = + $+ %net
       if (- !isin %defstat.net) %defstat.net = + $+ %defstat.net
-      if (!%win.pts) && (!%loss.pts) %send Netscore over $+(%days,d) :: No data
+      %buffer = Netscore over $+(%days,d)
+      if (!%win.pts) && (!%loss.pts) %buffer = %buffer :: No data
       else {
-        %send Netscore over $+(%days,d) :: %fights fights total :: Offensive: $+(%win.off,/,%loss.off) W/L :: Defensive: $+(%win.def,/,%loss.def) W/L :: Netscore: $+(%win.pts,-,%loss.pts) ( $+ %net $+ )
-        if (!%defstat.winpts) && (!%defstat.losspts) %send Defensive netscore: No data
-        else %send Defensive netscore: $+(%defstat.winpts,-,%defstat.losspts) ( $+ %defstat.net $+ ), accounted for $+(%defstat.win,/,%defstat.loss) defense W/L
+        %buffer = %buffer :: %fights fights total
+        %buffer = %buffer :: Offensive: $+(%win.off,/,%loss.off) W/L
+        %buffer = %buffer :: Defensive: $+(%win.def,/,%loss.def) W/L
+        %buffer = %buffer :: Netscore: $+(%win.pts,-,%loss.pts) ( $+ %net $+ )
+        if (!%defstat.winpts) && (!%defstat.losspts) var %defstat = No data
+        else var %defstat = $+(%defstat.winpts,-,%defstat.losspts) ( $+ %defstat.net $+ ), accounted for $+(%defstat.win,/,%defstat.loss) defense W/L
+        %buffer = %buffer :: Defensive netscore: %defstat
       }
+      %send %buffer
     }
   }
   return
