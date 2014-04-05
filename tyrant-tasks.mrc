@@ -20,6 +20,7 @@ alias fiqbot.tyrant.init {
     %hload conquest
     %hload targets
     %hload wars
+    %hload wardata
     return
   }
   if (!$hget(users)) hmake users 1000
@@ -29,6 +30,7 @@ alias fiqbot.tyrant.init {
   if (!$hget(conquest)) hmake conquest 1000
   if (!$hget(targets)) hmake targets 100
   if (!$hget(wars)) hmake wars 10
+  if (!$hget(wardata)) hmake wardata 1000
 }
 
 ;Helpers
@@ -350,6 +352,7 @@ alias fiqbot.tyrant.runinterval {
     %hsave conquest
     %hsave targets
     %hsave wars
+    %hsave wardata
     %hsave cards
     %hsave raids
 
@@ -374,7 +377,7 @@ alias fiqbot.tyrant.updatefactioninfo {
       fiqbot.tyrant.checktargets %i
       
       ;War tracking
-      ;fiqbot.tyrant.checkwarinfo %i
+      fiqbot.tyrant.checkwarinfo %i
       
       ;Check new wars
       fiqbot.tyrant.checkwars %i
@@ -1340,9 +1343,138 @@ on *:sockread:tyranttask*:{
     goto done
     
     :CHECKWARINFO
+    var %id, %idx, %friend, %opponent, %friend_name, %opponent_name %start, %completed, %atk, %def, %diff, %end, %atkfp, %deffp
+
+    var %user_faction = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
+    tokenize 44 %temp
+    %id = $noqt($gettok($1,2,58))
+    %idx = $+(_,%user_faction,_,%id)
+    %friend = $noqt($gettok($2,2,58))
+    %opponent = $noqt($gettok($3,2,58))
+    %friend_name = $hget(factions,$+(name,%friend))
+    %opponent_name = $hget(factions,$+(name,%opponent))
+    %start = $noqt($gettok($4,2,58))
+    %completed = $noqt($gettok($6,2,58))
+    %atk = $noqt($gettok($7,2,58))
+    %def = $noqt($gettok($8,2,58))
+    %atkfp = $noqt($gettok($11,2,58))
+    %deffp = $noqt($gettok($12,2,58))
+    %diff = %atk - %def
+    %end = Ended $fiqbot.tyrant.duration($calc($ctime - ( %start + 3600 * 6 ) )) ago
+    if (%friend != %user_faction) {
+      %diff = $calc(%diff * -1)
+      var %atkfptmp = %atkfp
+      %atkfp = %deffp
+      %deffp = %atkfptmp
+    }
+    if (- !isin %diff) %diff = + $+ %diff
+    if (- !isin %atkfp) %atkfp = + $+ %atkfp
+    if (- !isin %deffp) %atkfp = + $+ %deffp
+    if (%completed) {
+      if (!$hget(wardata,$+(completed,%idx))) {
+        hadd wardata $+(completed,%idx) 1
+        msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] War finished! %id :: $+(%friend_name,-,%opponent_name) :: $+(%atk,-,%def) ( $+ %diff $+ ) :: FP gains: $+(Us,%atkfp) $+(Them,%deffp) :: %end
+      }
+    }
     goto done
     
     :CHECKWARRANKINGS
+    var %id, %idx, %war, %win.off, %win.def, %win.pts, %loss.off, %loss.def, %loss.pts, %net, %faction, %fights
+    var %defstat.win, %defstat.loss, %defstat.winpts, %defstat.losspts, %defstat.net
+
+    ;check if the request is finished
+    var %timecheck
+
+    var %user_faction = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
+
+    %temp = %tempold $+ %temp
+    tokenize 44 %temp
+    %counter = 0
+    while ($12) {
+      inc %counter 11
+      %id = $noqt($gettok($1,4,58))
+      if (!%id) %id = $noqt($gettok($1,3,58))
+      if (!%id) %id = $noqt($gettok($1,2,58))
+      %war = $noqt($gettok($2,2,58))
+      %win.off = $noqt($gettok($3,2,58))
+      %loss.off = $noqt($gettok($4,2,58))
+      %win.pts = $noqt($gettok($5,2,58))
+      %faction = $noqt($gettok($7,2,58))
+      %loss.pts = $noqt($gettok($8,2,58))
+      %win.def = $noqt($gettok($10,2,58))
+      %loss.def = $noqt($remove($gettok($11,2,58),$chr(125),$chr(93)))
+      tokenize 44 $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+      %net = %win.pts - %loss.pts
+      %fights = %win.off + %loss.off
+      %timecheck = $noqt($gettok($12,1,58))
+      if (%timecheck == time) {
+        var %idy = $+(_,%user_faction,_,%war)
+        var %pointer = $hget(wars,$+(pointer,%idy))
+        if (%pointer == $hget(wars,$+(start,%user_faction))) {
+          hinc wars $+(start,%user_faction)
+        }
+      }
+      %idx = $+(_,%war,_,%id)
+      if (!$hget(wardata,$+(log,%idx))) {
+        hadd wardata $+(log,%idx) 1
+        hadd wardata $+(winoff,%idx) 0
+        hadd wardata $+(lossoff,%idx) 0
+        hadd wardata $+(winpts,%idx) 0
+        hadd wardata $+(losspts,%idx) 0
+        hadd wardata $+(windef,%idx) 0
+        hadd wardata $+(lossdef,%idx) 0
+        hadd wardata $+(faction,%idx) %faction
+        hadd wardata $+(net,%idx) 0
+        hadd wardata $+(fights,%idx) 0
+        hadd wardata $+(defstatwin,%idx) 0
+        hadd wardata $+(defstatloss,%idx) 0
+        hadd wardata $+(defstatwinpts,%idx) 0
+        hadd wardata $+(defstatlosspts,%idx) 0
+        hadd wardata $+(defstatnet,%idx) 0
+      }
+      if (%win.pts == $hget(wardata,$+(winpts,%idx))) && (%loss.pts == $hget(wardata,$+(losspts,%idx))) {
+        continue
+      }
+      %defstat.win = $iif($hget(wardata,$+(defstatwin,%idx)),$v1,0)
+      %defstat.loss = $iif($hget(wardata,$+(defstatloss,%idx)),$v1,0)
+      %defstat.winpts = $iif($hget(wardata,$+(defstatwinpts,%idx)),$v1,0)
+      %defstat.losspts = $iif($hget(wardata,$+(defstatlosspts,%idx)),$v1,0)
+      %defstat.net = $iif($hget(wardata,$+(defstatnet,%idx)),$v1,0)
+
+      if (%win.off == $hget(wardata,$+(winoff,%idx))) && (%loss.off == $hget(wardata,$+(lossoff,%idx))) {
+        inc %defstat.win $calc(%win.def - $hget(wardata,$+(windef,%idx)))
+        inc %defstat.loss $calc(%loss.def - $hget(wardata,$+(lossdef,%idx)))
+        inc %defstat.winpts $calc(%win.pts - $hget(wardata,$+(winpts,%idx)))
+        inc %defstat.losspts $calc(%loss.pts - $hget(wardata,$+(losspts,%idx)))
+        inc %defstat.net $calc(%net - $hget(wardata,$+(net,%idx)))
+      }
+      elseif (%fights != $hget(wardata,$+(fights,%idx))) {
+        var %stamina = $hget(userdata,$+(stamina,%id))
+        if (%stamina) {
+          if (%stamina < $ctime) %stamina = $ctime
+          inc %stamina $calc( ( %fights - $hget(wardata,$+(fights,%idx)) ) * 600)
+          hadd userdata $+(stamina,%id) %stamina
+        }
+        hadd userdata $+(waractivity,%id) $ctime
+      }
+      hadd wardata $+(winoff,%idx) %win.off
+      hadd wardata $+(lossoff,%idx) %loss.off
+      hadd wardata $+(winpts,%idx) %win.pts
+      hadd wardata $+(losspts,%idx) %loss.pts
+      hadd wardata $+(windef,%idx) %win.def
+      hadd wardata $+(lossdef,%idx) %loss.def
+      hadd wardata $+(net,%idx) %net
+      hadd wardata $+(fights,%idx) %fights
+      hadd wardata $+(defstatwin,%idx) %defstat.win
+      hadd wardata $+(defstatloss,%idx) %defstat.loss
+      hadd wardata $+(defstatwinpts,%idx) %defstat.winpts
+      hadd wardata $+(defstatlosspts,%idx) %defstat.losspts
+      hadd wardata $+(defstatnet,%idx) %defstat.net
+    }
+    %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+    set -u0 %metadata2 %members
+    hadd socketdata $+(metadata2_,%sockid) %metadata2
+    hadd socketdata $+(temp,%sockid) %temp
     goto done
 
     :SHOWFACTION
@@ -1677,10 +1809,11 @@ on *:sockread:tyranttask*:{
           hadd wars $+(nextid,%user_faction) %nextid
         }
         hinc wars $+(nextid,%user_faction)
-        
+
         var %nextidx = $+(_,%user_faction,_,%nextid)
         hadd wars $+(pointer,%idx) %nextid
         hadd wars $+(id,%nextidx) %id
+        hadd wardata $+(started,%id) $noqt($gettok($4,2,58))
 
         var %buffer, %nick
         var %i = 0
@@ -1803,13 +1936,16 @@ on *:sockclose:tyranttask*:{
   var %usercheck_faction = $hget(factiondata,$+(usercheck,%user_faction))
   var %usercheck_player = $hget(userdata,$+(usercheck,%idx))
   if (%usercheck_player) {
-    var %rank, %active, %ctime_days, %lp, %cq_claimed, %items, %member_until
+    var %rank, %active, %ctime_days, %lp, %cq_claimed, %items, %member_until, %stamina, %waractivity, %waractivity_timer
     %rank = $hget(userdata,$+(rank,%idx))
     %active = $hget(userdata,$+(active,%idx))
     %lp = $hget(userdata,$+(lp,%idx))
     %cq_claimed = $hget(userdata,$+(cq_claimed,%idx))
     %member_until = $hget(userdata,$+(member_until,%idx))
-    %stamina = $hget(userdata,$+(stamina,%id))
+    %stamina = $hget(userdata,$+(stamina,%p_id))
+    %waractivity = $hget(userdata,$+(waractivity,%p_id))
+    %waractivity_timer = $fiqbot.tyrant.duration($calc($ctime - %waractivity)) ago
+    if (!%waractivity) %waractivity_timer = (never)
 
     %ctime_days = $int($calc($ctime / 86400))
     %active = %ctime_days - %active
@@ -1818,7 +1954,7 @@ on *:sockclose:tyranttask*:{
 
     if (%usercheck_faction == %usercheck_player) {
       %buffer = Stamina: $fiqbot.tyrant.energy(%stamina,300).showcap
-      %buffer = Last active: %active
+      %buffer = %buffer :: Last active: %active (last war fight was %waractivity_timer $+ )
       %buffer = %buffer :: Tokens last claimed: $fiqbot.tyrant.duration($calc($ctime - %cq_claimed)) ago
     }
     else {
@@ -1827,6 +1963,43 @@ on *:sockclose:tyranttask*:{
       %buffer = %buffer :: Left faction: $fiqbot.tyrant.duration($calc($ctime - %member_until)) ago
     }
     %send %buffer
+    if (%usercheck_faction == %usercheck_player) {
+      var %win.off, %win.def, %win.pts, %loss.off, %loss.def, %loss.pts, %fights, %net
+      var %defstat.win, %defstat.winpts, %defstat.loss, %defstat.losspts, %defstat.net
+      var %days = 7
+      var %daystime = $calc($ctime - %days * 86400)
+      var %i = 1
+      while (%i < $hget(wars,$+(nextid,%user_faction))) {
+        var %war = $hget(wars,$+(id_,%user_faction,_,%i))
+        if ($hget(wardata,$+(started,%war)) < %daystime) {
+          inc %i
+          continue
+        }
+        %idx = $+(_,%war,_,%p_id)
+        %win.off = $calc(%win.off + $hget(wardata,$+(winoff,%idx)))
+        %win.def = $calc(%win.def + $hget(wardata,$+(windef,%idx)))
+        %win.pts = $calc(%win.pts + $hget(wardata,$+(winpts,%idx)))
+        %loss.off = $calc(%loss.off + $hget(wardata,$+(lossoff,%idx)))
+        %loss.def = $calc(%loss.def + $hget(wardata,$+(lossdef,%idx)))
+        %loss.pts = $calc(%loss.pts + $hget(wardata,$+(losspts,%idx)))
+        %defstat.win = $calc(%defstat.win + $hget(wardata,$+(defstatwin,%idx)))
+        %defstat.winpts = $calc(%defstat.winpts + $hget(wardata,$+(defstatwinpts,%idx)))
+        %defstat.loss = $calc(%defstat.loss + $hget(wardata,$+(defstatloss,%idx)))
+        %defstat.losspts = $calc(%defstat.losspts + $hget(wardata,$+(defstatlosspts,%idx)))
+        inc %i
+      }
+      %fights = %win.off + %loss.off
+      %net = %win.pts - %loss.pts
+      %defstat.net = %defstat.winpts - %defstat.losspts
+      if (- !isin %net) %net = + $+ %net
+      if (- !isin %defstat.net) %defstat.net = + $+ %defstat.net
+      if (!%win.pts) && (!%loss.pts) %send Netscore over $+(%days,d) :: No data
+      else {
+        %send Netscore over $+(%days,d) :: %fights fights total :: Offensive: $+(%win.off,/,%loss.off) W/L :: Defensive: $+(%win.def,/,%loss.def) W/L :: Netscore: $+(%win.pts,-,%loss.pts) ( $+ %net $+ )
+        if (!%defstat.winpts) && (!%defstat.losspts) %send Defensive netscore: No data
+        else %send Defensive netscore: $+(%defstat.winpts,-,%defstat.losspts) ( $+ %defstat.net $+ ), accounted for $+(%defstat.win,/,%defstat.loss) defense W/L
+      }
+    }
   }
   return
 
@@ -1845,6 +2018,8 @@ on *:sockclose:tyranttask*:{
   :CHECKPLAYERNAME
   :CHECKTARGETS
   :CHECKVAULT
+  :CHECKWARINFO
+  :CHECKWARRANKINGS
   :CHECKWARS
   :SHOWFACTION
   :SHOWID
