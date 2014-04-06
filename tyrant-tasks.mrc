@@ -1472,8 +1472,6 @@ on *:sockread:tyranttask*:{
       hadd wardata $+(defstatnet,%idx) %defstat.net
     }
     %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
-    set -u0 %metadata2 %members
-    hadd socketdata $+(metadata2_,%sockid) %metadata2
     hadd socketdata $+(temp,%sockid) %temp
     goto done
 
