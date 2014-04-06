@@ -1344,10 +1344,14 @@ on *:sockread:tyranttask*:{
     goto done
     
     :CHECKWARINFO
-    var %id, %idx, %friend, %opponent, %friend_name, %opponent_name %start, %completed, %atk, %def, %diff, %end, %atkfp, %deffp
+    var %id, %idcheck, %idx, %friend, %opponent, %friend_name, %opponent_name %start, %completed, %atk, %def, %diff, %end, %atkfp, %deffp
 
     var %user_faction = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
     tokenize 44 %temp
+
+    %idcheck = $noqt($remove($gettok($1,1,58),$chr(123)))
+    if (%idcheck != faction_war_id) goto done
+    
     %id = $noqt($gettok($1,2,58))
     %idx = $+(_,%user_faction,_,%id)
     %friend = $noqt($gettok($2,2,58))
