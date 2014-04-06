@@ -1577,7 +1577,6 @@ on *:sockread:tyranttask*:{
       if (!%p_updated) %p_updated = 0
       if (%p_updated < $calc($ctime - 7200)) hadd userdata $+(updated,%p_id) $ctime
       set -u0 %metadata1 %p_updated
-      hadd socketdata $+(metadata_,%sockid) 1
       hadd socketdata $+(metadata1_,%sockid) %metadata1
       %p_elo = $noqt($gettok($5,2,58))
       %p_arena = $noqt($gettok($6,2,58))
