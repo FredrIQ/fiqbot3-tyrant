@@ -694,6 +694,7 @@ alias fiqbot.tyrant.showownedcards {
 }
 alias fiqbot.tyrant.showplayer {
   set -u0 %metadata1 1
+  set -u0 %metadata2 $2
   set -u0 %user $1
   set -u0 %task showplayer
   set -u0 %msg getProfileData
@@ -1964,7 +1965,7 @@ on *:sockclose:tyranttask*:{
     if (%usercheck_faction == %usercheck_player) {
       var %win.off, %win.def, %win.pts, %loss.off, %loss.def, %loss.pts, %fights, %net
       var %defstat.win, %defstat.winpts, %defstat.loss, %defstat.losspts, %defstat.net
-      var %days = 7
+      var %days = %metadata2
       var %daystime = $calc($ctime - %days * 86400)
       var %i = 1
       while (%i < $hget(wars,$+(nextid,%user_faction))) {

@@ -218,7 +218,7 @@ alias initcmd {
     Parameters are [check] - check current settings globally, for the current channel and for yourself globally and for the current channel, [nick] - disable alerts for [nick], [global] - disable alerts completely, [highlights] - keep alerts, but don't mass highlight, [reset] - unset channel/global settings, [unset] - unset setting for you or [nick].¤ $&
     Use [#channel] to disable for a specific channel, either a specific nick or globally. Setting alert status for a specific nick which isn't you requires level 4+, setting channel alert status requires level 3+.
   set %fiqbot_cmd_ownedcards 3:<name or ID>:Exports given player's owned cards to ownedcards.txt format.
-  set %fiqbot_cmd_player 1:[#channel] <name or ID>:Displays some information about the player. Displays extra info if the player is, or used to be, member of a channel's faction (or [#channel]).
+  set %fiqbot_cmd_player 1:[#channel] <name or ID> [netscore days]:Displays some information about the player. Displays extra info if the player is, or used to be, member of a channel's faction (or [#channel]), and if this is the case, [netscore days] will adjust the amount of days back the netscore tracking goes.
   set %fiqbot_cmd_postdata 11:<query> [parameters]:Shows post data for given query.
   set %fiqbot_cmd_raid 1:[-l] <name or ID>:Displays raid hosted by given user. -l makes the raid key show up, if you have enough access (level 3).
   set %fiqbot_cmd_rebuild 11:(nothing):Rebuilds the card and raid database.
@@ -1423,8 +1423,16 @@ on *:TEXT:*:*:{
   set -u0 %usertarget %factionuser
 
   if (!$3) { fiqbot.usage $2 $chan | return }
+
+  var %days = 7
+  if ($4 != $null) %days = $4
+  if (%days !isnum) || (. isin %days) || (%days < 1) {
+    %send Days must be an integer above 0.
+    return
+  }
+  
   fiqbot.tyrant.login %usertarget
-  fiqbot.tyrant.showplayer $3
+  fiqbot.tyrant.showplayer $3 %days
   return
 
   :POSTDATA
