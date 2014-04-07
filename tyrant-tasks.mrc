@@ -1374,7 +1374,7 @@ on *:sockread:tyranttask*:{
     }
     if (- !isin %diff) %diff = + $+ %diff
     if (- !isin %atkfp) %atkfp = + $+ %atkfp
-    if (- !isin %deffp) %atkfp = + $+ %deffp
+    if (- !isin %deffp) %deffp = + $+ %deffp
     if (%completed) {
       if (!$hget(wardata,$+(completed,%idx))) {
         hadd wardata $+(completed,%idx) 1
