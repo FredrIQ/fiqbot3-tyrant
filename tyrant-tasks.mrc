@@ -335,14 +335,16 @@ alias fiqbot.tyrant.hsave {
 ;Continous commands
 alias fiqbot.tyrant.runinterval {
   set -u0 %send noop
+  fiqbot.tyrant.updatefactioninfo
+  
   fiqbot.tyrant.login 1
+  if (%bruteforcing1) return
   inc %interval 1
 
   fiqbot.tyrant.downloadfactions
 
   fiqbot.tyrant.checkvault
   fiqbot.tyrant.checkconquestmap
-  fiqbot.tyrant.updatefactioninfo
   if (!$calc(%interval % 20)) {
     var %hsave = fiqbot.tyrant.hsave
     %hsave users

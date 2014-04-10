@@ -1810,7 +1810,7 @@ on *:TEXT:*:*:{
   %buffer = Faction ID %fid
   if (%factionname) %buffer = %factionname
 
-  if (!%totaltiles) {
+  if (!%totaltiles) && (!%attacking) && (!%defending) {
     %buffer = %buffer isn't on the conquest board.
     %send %buffer
     return
@@ -1819,13 +1819,16 @@ on *:TEXT:*:*:{
   %buffer = $iif((%attacking) || (%defending),$+(%buffer,$chr(44)),%buffer and) $+(%totalcr,CR)
   if (%attacking) %buffer = $iif(%defending,$+(%buffer,$chr(44)),%buffer and) is attacking %attacking
   if (%defending) %buffer = %buffer and $iif(!%attacking,is) defending %defensebuffer
-  if (%totaltiles <= 5) {
+  if (%totaltiles > 5) {
+    %send %buffer
+    %send Tiles: %tilebuffer
+  }
+  elseif (%totaltiles) {
     %buffer = %buffer :: Tiles: %tilebuffer
     %send %buffer
   }
   else {
     %send %buffer
-    %send Tiles: %tilebuffer
   }
 
   %buffer = $null
