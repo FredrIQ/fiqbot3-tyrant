@@ -432,7 +432,7 @@ on *:TEXT:*:*:{
   }
   else {
     if (!%prefix) { return }
-    if ($fiqbot.mode($fiqbot.insertNetwork($chan),p)) set -u0 %send msg $chan
+    if ($fiqbot.mode($fiqbot.insertNetwork($chan),P)) set -u0 %send msg $chan
   }
 
   ;escape input for the command name to prevent evil evalutions
@@ -1988,10 +1988,108 @@ on *:TEXT:*:*:{
     %send There's currently no account assigned to $iif(%chan == $chan,this channel,%chan) $+ .
     return
   }
-  fiqbot.tyrant.login %factionuser
-  fiqbot.tyrant.showwars
-  return
+  if (!$3) {
+    fiqbot.tyrant.login %factionuser
+    fiqbot.tyrant.showwars
+    return
+  }
+  var %war, %player, %playername, %amount, %faction
+  %war = 0
+  %player = 0
+  %playername = $null
+  %amount = 3
+  %faction = %fiqbot_tyrant_fid [ $+ [ %factionuser ] ]
+  if ($hget(wars,$+(pointer_,%faction,_,$3))) {
+    %war = $3
+    %amount = 1
+    tokenize 32 $1-2 $4-
+  }
+  if ($3) {
+    if ($3 !isnum) || (. isin $3) {
+      %player = $fiqbot.tyrant.db.select(users,$3)
+      
+      if ($gettok(%player,0,32) > 1) {
+        %send There are several players with this name. The most likely option has been selected. Options are: %db_user (query by ID to get those)
+        %player = $gettok(%player,1,32)
+      }
+      if (!%player) {
+        %send No such player.
+        return
+      }
+    }
+    else {
+      %player = $3
+    }
+    if ($4) && (!%war) {
+      if ($4 < 1) || ($4 !isnum) || (. isin $4) {
+        %send Invalid war amount: $4
+        return
+      }
+      %amount = $4
+      if (%amount > 10) %amount = 10
+    }
+  }
+  if (%player) {
+    %playername = $hget(users,$+(name,%player))
+    if (!%playername) {
+      %send No such player.
+      return
+    }
+    var %win.off, %win.def, %win.pts, %loss.off, %loss.def, %loss.pts, %fights, %net
+    var %defstat.win, %defstat.winpts, %defstat.loss, %defstat.losspts, %defstat.net
+    var %idx, %nextid, %nextidx, %sent
+    
+    %nextid = $hget(wars,$+(nextid,%faction))
+    %sent = $false
+    if (!%war) {
+      %send Showing performance for %playername for the latest %amount $iif(%amount == 1,war,wars)
+    }
+    while (%amount) {
+      dec %nextid
+      dec %amount
 
+      %nextidx = $+(_,%faction,_,%nextid)
+      if (!%war) {
+        %war = $hget(wars,$+(id,%nextidx))
+      }
+      if (!%war) {
+        break
+      }
+      %idx = $+(_,%war,_,%player)
+      %win.off = $calc(%win.off + $hget(wardata,$+(winoff,%idx)))
+      %win.def = $calc(%win.def + $hget(wardata,$+(windef,%idx)))
+      %win.pts = $calc(%win.pts + $hget(wardata,$+(winpts,%idx)))
+      %loss.off = $calc(%loss.off + $hget(wardata,$+(lossoff,%idx)))
+      %loss.def = $calc(%loss.def + $hget(wardata,$+(lossdef,%idx)))
+      %loss.pts = $calc(%loss.pts + $hget(wardata,$+(losspts,%idx)))
+      %fights = %win.off + %loss.off
+      %net = %win.pts - %loss.pts
+      %defstat.win = $calc(%defstat.win + $hget(wardata,$+(defstatwin,%idx)))
+      %defstat.winpts = $calc(%defstat.winpts + $hget(wardata,$+(defstatwinpts,%idx)))
+      %defstat.loss = $calc(%defstat.loss + $hget(wardata,$+(defstatloss,%idx)))
+      %defstat.losspts = $calc(%defstat.losspts + $hget(wardata,$+(defstatlosspts,%idx)))
+      %defstat.net = %defstat.winpts - %defstat.losspts
+      if (- !isin %net) %net = $+(+,%net)
+      if (- !isin %defstat.net) %defstat.net = $+(+,%defstat.net)
+      if (!%win.pts) && (!%loss.pts) {
+        unset %war
+        continue
+      }
+      var %buffer = $null
+      %buffer = %war
+      %buffer = %buffer :: %playername
+      %buffer = %buffer :: Points: $+(%win.pts,-,%loss.pts) ( $+ %net $+ )
+      %buffer = %buffer :: Attack: $+(%win.off,/,%loss.off)
+      %buffer = %buffer :: Defense: $+(%win.def,/,%loss.def)
+      %buffer = %buffer :: Defense points: $+(%defstat.winpts,-,%defstat.losspts) ( $+ %defstat.net $+ ), accounted for $+(%defstat.win,/,%defstat.loss) defense W/L
+      %send %buffer
+      %sent = $true
+      unset %war
+    }
+    if (!%sent) %send No data.
+    return
+  }
+  return
   :WARLOG
   var %chan = $chan
   if ($left($3,1) == $#) {
