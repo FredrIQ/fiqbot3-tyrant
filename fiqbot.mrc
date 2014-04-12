@@ -2116,18 +2116,18 @@ on *:TEXT:*:*:{
         break
       }
       %idx = $+(_,%war,_,%player)
-      %win.off = $calc(%win.off + $hget(wardata,$+(winoff,%idx)))
-      %win.def = $calc(%win.def + $hget(wardata,$+(windef,%idx)))
-      %win.pts = $calc(%win.pts + $hget(wardata,$+(winpts,%idx)))
-      %loss.off = $calc(%loss.off + $hget(wardata,$+(lossoff,%idx)))
-      %loss.def = $calc(%loss.def + $hget(wardata,$+(lossdef,%idx)))
-      %loss.pts = $calc(%loss.pts + $hget(wardata,$+(losspts,%idx)))
+      %win.off = $hget(wardata,$+(winoff,%idx))
+      %win.def = $hget(wardata,$+(windef,%idx))
+      %win.pts = $hget(wardata,$+(winpts,%idx))
+      %loss.off = $hget(wardata,$+(lossoff,%idx))
+      %loss.def = $hget(wardata,$+(lossdef,%idx))
+      %loss.pts = $hget(wardata,$+(losspts,%idx))
       %fights = %win.off + %loss.off
       %net = %win.pts - %loss.pts
-      %defstat.win = $calc(%defstat.win + $hget(wardata,$+(defstatwin,%idx)))
-      %defstat.winpts = $calc(%defstat.winpts + $hget(wardata,$+(defstatwinpts,%idx)))
-      %defstat.loss = $calc(%defstat.loss + $hget(wardata,$+(defstatloss,%idx)))
-      %defstat.losspts = $calc(%defstat.losspts + $hget(wardata,$+(defstatlosspts,%idx)))
+      %defstat.win = $hget(wardata,$+(defstatwin,%idx))
+      %defstat.winpts = $hget(wardata,$+(defstatwinpts,%idx))
+      %defstat.loss = $hget(wardata,$+(defstatloss,%idx))
+      %defstat.losspts = $hget(wardata,$+(defstatlosspts,%idx))
       %defstat.net = %defstat.winpts - %defstat.losspts
       if (- !isin %net) %net = $+(+,%net)
       if (- !isin %defstat.net) %defstat.net = $+(+,%defstat.net)
