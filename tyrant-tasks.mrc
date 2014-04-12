@@ -1186,7 +1186,7 @@ on *:sockread:tyranttask*:{
         if ($hget(factions,$+(name,%faction_id))) %faction_name = $hget(factions,$+(name,%faction_id))
 
         var %idx = $+(_,%faction_id,_,%id)
-        var %fc = %fiqbot_tyrant_factionchannel_ [ $+ [ %fiqbot_tyrant_faccount [ $+ [ %faction_id ] ] ] ]
+        var %fc = %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ]
         var %fc.send = msg %fc [FACTION]
         var %newmember = $false
 
@@ -1271,6 +1271,69 @@ on *:sockread:tyranttask*:{
     fiqbot.tyrant.addfaction %id %name
     goto done
     :CHECKINVASION
+    var %tile, %slot, %id, %hp, %commander, %commandername, %oldhp, %oldcommander, %oldcommandername, %systemcheck, %counter, %maxhp
+
+    var %fc = %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ]
+    var %fc.send = msg %fc [INVASION]
+
+    var %user_faction = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
+
+    %temp = %tempold $+ %temp
+    tokenize 44 %temp
+    %counter = 0
+    while ($7) || ($right(%temp,4) == }}}}) {
+      %systemcheck = $noqt($gettok($2,1,58))
+      echo -s debug: %systemcheck
+      if (%systemcheck == system) {
+        if (!$20) break
+        inc %counter 19
+        %tile = $noqt($gettok($2,3,58))
+        %maxhp = $noqt($gettok($19,2,58))
+        if (!$hget(invasions,$+(maxhp,%tile))) hadd invasions $+(maxhp,%tile) %maxhp
+        if ($hget(invasions,$+(maxhp,%tile)) != %maxhp) {
+          %fc.send Max HP changed: $hget(invasions,$+(maxhp,%tile)) -> %maxhp
+          hadd invasions $+(maxhp,%tile) %maxhp
+        }
+        tokenize 44 $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+        continue
+      }
+      echo -s debug: $1-6
+      inc %counter 6
+      %tile = $noqt($gettok($1,4,58))
+      if (!%tile) %tile = $noqt($gettok($1,3,58))
+      %slot = $noqt($gettok($2,2,58))
+      %hp = $noqt($gettok($3,2,58))
+      %commander = $noqt($gettok($5,2,58))
+      tokenize 44 $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+
+      %id = $+(_,%tile,_,%slot)
+      %maxhp = $hget(invasions,$+(maxhp,%tile))
+
+      if (!$hget(invasions,$+(active,%id))) {
+        if (!$hget(invasions,$+(slots,%tile))) hadd invasions $+(slots,%tile) 0
+        hinc invasions $+(slots,%tile)
+        hadd invasions $+(active,%id) 1
+        hadd invasions $+(hp,%id) %hp
+        hadd invasions $+(commander,%id) %commander
+        hadd invasions $+(changed,%id) 0
+      }
+      %oldhp = $hget(invasions,$+(hp,%id))
+      %oldcommander = $hget(invasions,$+(commander,%id))
+      %commandername = $hget(cards,$+(name,%commander))
+      %oldcommandername = $hget(cards,$+(name,%oldcommandername))
+
+      if (%oldhp) && (!%hp) {
+        %fc.send Slot %slot has been defeated!
+      }
+      if (%oldcommander != %commander) {
+        %fc.send Slot %slot changed commander: %oldcommandername -> %commandername
+        hadd invasions $+(changed,%id) $ctime
+      }
+      hadd invasions $+(hp,%id) %hp
+      hadd invasions $+(commander,%id) %commander
+    }
+    %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+    hadd socketdata $+(temp,%sockid) %temp
     goto done
     :CHECKPLAYERNAME
     var %id, %name, %timecheck, %nextid

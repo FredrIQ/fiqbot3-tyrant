@@ -212,6 +212,10 @@ alias initcmd {
   set %fiqbot_cmd_factionchannel 11:[#channel] [internal account ID|reset] [nouser]:Shows, changes or removes a faction's account assign used. [nouser] means that the bot will ignore the fact that there's no user with that internal ID.
   set %fiqbot_cmd_getid 1:<nick>:Displays user ID for specified nick.
   set %fiqbot_cmd_hash 1:[add <deckname>/del/list] <deckname/cardlist/hash>:Displays the deck hash of the given cardlist, or a cardlist if the input was a deck hash. Add/del/list manages saved decks.
+  set %fiqbot_cmd_invasion 1:[[claim|unclaim|stuck|unstuck] <slot>|<add|set> <slot> <content>]:Manages a conquest invasion.¤ $&
+    Parameters are [claim|unclaim] - Claims (or unclaims) specified slot, [stuck|unstuck] - Marks or removes you as stuck on the slot, $&
+    <add|set> - Appends, or set from scratch, deck content for chosen slot.¤ $&
+    [slot] (only) - Shows details about the slot, i.e. HP, commander, deck, etc.
   set %fiqbot_cmd_ison 1:<user-ID|username>:Checks whether or not an user is logged in to the game.
   set %fiqbot_cmd_killsockets 11:(nothing):Resets all Tyrant requests and reloads the socket counter.
   set %fiqbot_cmd_noalert 1:[check|[#channel] [nick [unset]|global|highlights|unset|reset]]:Disables war alert highlighting.¤ $&
@@ -1287,6 +1291,62 @@ on *:TEXT:*:*:{
     }
   }
   else %send Unknown error!
+  return
+
+  :INVASION
+  var %chan = $chan
+  if ($left($3,1) == $#) {
+    var %chan = $3
+    tokenize 32 $1-2 $4-
+    if (%access < 5) && ($nick !ison %chan) {
+      %send You're not in %chan and don't have sufficient access to check unless you're in the channel.
+      return
+    }
+  }
+  var %factionuser = %fiqbot_tyrant_factionchannel_ [ $+ [ %chan ] ]
+  if (!%factionuser) {
+    %send There's currently no faction assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    return
+  }
+  if (!%fiqbot_tyrant_userid [ $+ [ %factionuser ] ]) {
+    %send There's currently no account assigned to $iif(%chan == $chan,this channel,%chan) $+ .
+    return
+  }
+
+  var %user_faction = %fiqbot_tyrant_fid [ $+ [ %factionuser ] ]
+
+  if (!$hget(invasions,$+(tile_,%user_faction))) {
+    %send There's no invasion right now.
+    return
+  }
+  var %tile = $hget(invasions,$+(tile_,%user_faction))
+  var %i = 0
+  var %slots = 0
+  var %hp = 0
+  var %hp_total = 0
+  var %alive = 0
+  var %buffer
+  while (%slots < $hget(invasions,$+(slots,%tile))) {
+    inc %i
+    var %id = $+(_,%tile,_,%i)
+    if (!$hget(invasions,$+(active,%id))) continue
+    if (%i > 70) {
+      %send Error: Exceeded potential deck max!
+      break
+    }
+
+    if (!%buffer) %buffer = %i
+    else %buffer = %buffer $+ , %i
+    inc %slots
+    %hp = $hget(invasions,$+(hp,%id))
+    if (%hp) {
+      inc %alive
+      inc %hp_total %hp
+    }
+  }
+  var %maxhp = %slots * $hget(invasions,$+(maxhp,%tile))
+
+  %send Slots alive: $+(%alive,/,%slots) :: HP: $+(%hp_total,/,%maxhp)
   return
 
   :ISON
