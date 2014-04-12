@@ -721,11 +721,10 @@ alias fiqbot.tyrant.showwarlog {
   set -u0 %task showwarlog
   set -u0 %msg getOldFactionWars
   set -u0 %metadata1 1
-  set -u0 %metadata2 1
-  set -u0 %metadata3 no
-  set -u0 %metadata4 1
-  if ($1) set -u0 %metadata2 $1
-  if ($2) set -u0 %metadata3 $2-
+  set -u0 %metadata2 no
+  set -u0 %metadata3 1
+  if ($1) set -u0 %metadata1 $1
+  if ($2) set -u0 %metadata2 $2-
   fiqbot.tyrant.runsocket
 }
 alias fiqbot.tyrant.showwars {
@@ -1777,34 +1776,26 @@ on *:sockread:tyranttask*:{
     }
     goto done
     :SHOWWARLOG
-    var %id, %off_id, %friend, %opponent, %end, %atk, %def, %diff, %wars, %warcounter, %first
+    var %id, %off_id, %friend, %opponent, %end, %atk, %def, %diff, %counter
     %temp = %tempold $+ %temp
     tokenize 44 %temp
-    %wars = $false
-    %warcounter = 0
-    %first = %metadata1
-    while (($14) && (%metadata2)) {
-      inc %warcounter
-      if (%first) %id = $noqt($gettok($1,3,58))
-      else %id = $noqt($gettok($1,2,58))
-      if (%first) {
-        %first = 0
-        hadd socketdata $+(metadata1_,%sockid) 0
-        set -u0 %metadata1 0
-      }
-      %wars = $true
+    %counter = 0
+    while ($15) && (%metadata1) {
+      inc %counter 14
+      %id = $noqt($gettok($1,3,58))
+      if (!%id) %id = $noqt($gettok($1,2,58))
       %off_id = $noqt($gettok($2,2,58))
       %friend = $fiqbot.tyrant.factionname
       %opponent = $noqt($gettok($13,2,58))
       %opponent = $remove(%opponent,\)
       if (!%opponent) %opponent = (none)
-      if ((%metadata3 != no) && (%metadata3 != %opponent)) {
-        tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ $calc(14 * %warcounter),44)))
-        continue
-      }
       %end = Ended $fiqbot.tyrant.duration($calc(%ctime - ( $noqt($gettok($4,2,58)) + 3600 * 6 ) )) ago
       %atk = $noqt($gettok($7,2,58))
       %def = $noqt($gettok($8,2,58))
+      tokenize 44 $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+      if ((%metadata2 != no) && (%metadata2 != %opponent)) {
+        continue
+      }
       %diff = %atk - %def
       if (%off_id != $fiqbot.tyrant.factionid) {
         %friend = %opponent
@@ -1813,19 +1804,14 @@ on *:sockread:tyranttask*:{
       }
       if (- !isin %diff) %diff = + $+ %diff
       %send %id :: $+(%friend,-,%opponent) :: $+(%atk,-,%def) ( $+ %diff $+ ) :: %end
-      dec %metadata2
-      hdec socketdata $+(metadata2_,%sockid)
-      set -u0 %metadata4 0
-      hadd socketdata $+(metadata4_,%sockid) 0
-      tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ $calc(14 * %warcounter),44)))
+      dec %metadata1
+      hdec socketdata $+(metadata1_,%sockid)
+      set -u0 %metadata3 0
+      hadd socketdata $+(metadata3_,%sockid) 0
     }
-    var %temp_add = $right(%temp,- $+ $len($gettok(%temp,1- $+ $calc(14 * %warcounter),44)))
-    if (!%metadata2) {
-      var %temp_add = $null
-    }
-    %temp = %temp_add
+    %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
     hadd socketdata $+(temp,%sockid) %temp
-    if (!%metadata2) {
+    if (!%metadata1) {
       sockclose $sockname
       return
     }
@@ -2077,9 +2063,9 @@ on *:sockclose:tyranttask*:{
   return
 
   :SHOWWARLOG
-  if (%metadata4) {
+  if (%metadata3) {
     var %buffer = No earlier wars
-    if (%metadata3 != no) %buffer = %buffer with %metadata3
+    if (%metadata2 != no) %buffer = %buffer with %metadata3
     %send %buffer
     return
   }
