@@ -140,40 +140,43 @@ alias fiqbot.tyrant.db.add {
   }
 }
 alias fiqbot.tyrant.db.repair {
-  ;repairs faction DBs corrupted by previous id erasing bug.
-  hmake factions2 1000
+  ;repairs DBs corrupted by previous id erasing bug.
+  if ($hget(tmp)) hfree tmp
+  hmake tmp 1000
   if (!%send) set -u0 %send echo -s
-  var %id = 69002
+  var %table = $1
+  if (%table != users) && (%table != factions) {
+    %send Not a tyrant-DB: %table
+    return
+  }
+
+  var %i = 0
   var %name = ???
-  while (%id < %fiqbot_tyrant_lastfaction) {
-    if (%id < 70001) inc %id
-    else inc %id 1000
-    
-    if (%id == 69177) %id = 70001
-    if (%id == 1015001) %id = 3843003
-    if (%id == 8325003) %id = 125002
-    
-    %name = $hget(factions,$+(name,%id))
+  var %itemtarget
+  while (%i < $hfind(%table,name*,0,w)) {
+    inc %i
+    %itemtarget = $hfind(%table,name*,%i,w)
+    %id = $remove(%itemtarget,name)
+
+    %name = $hget(%table,$+(name,%id))
     if (!%name) %name = ???
-    hadd factions2 %id %name
+    hadd tmp %id %name
   }
-  
-  hfree factions
-  hmake factions 1000
-  var %id = 69002
-  while (%id < %fiqbot_tyrant_lastfaction) {
-    if (%id < 70001) inc %id
-    else inc %id 1000
-    
-    if (%id == 69177) %id = 70001
-    if (%id == 1015001) %id = 3843003
-    if (%id == 8325003) %id = 125002
-    
-    %name = $hget(factions2,%id)
+
+  hfree %table
+  hmake %table 1000
+
+  var %i = 0
+  while (%i < $hfind(tmp,*,0,w)) {
+    inc %i
+    %id = $hfind(tmp,*,%i,w)
+
+    %name = $hget(tmp,%id)
     if (!%name) %name = ???
-    fiqbot.tyrant.db.add factions %id %name
+
+    fiqbot.tyrant.db.add %table %id %name
   }
-  hfree factions2
+  hfree tmp
 }
 alias fiqbot.tyrant.db.select {
   var %table, %name, %buffer
