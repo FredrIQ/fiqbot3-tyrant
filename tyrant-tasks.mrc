@@ -1586,7 +1586,6 @@ on *:sockread:tyranttask*:{
     if (%cap > 50) %cap = 50
     %active = $round($calc(%members * %activity * 0.01),0)
 
-    fiqbot.tyrant.addfaction %id %name
     var %buffer
     %buffer = %name
     %buffer = %buffer (Level %level $+ , $+(%fp,FP) $+ )
@@ -1615,7 +1614,10 @@ on *:sockread:tyranttask*:{
         http://www.kongregate.com/games/synapticon/tyrant?source=finv&kv_apply= $+ %id
     }
 
-    if (%level) %send %buffer
+    if (%level) {
+      %send %buffer
+      fiqbot.tyrant.addfaction %id %name
+    }
     else {
       %name = $hget(factions,$+(name,%metadata1))
       if (%name != $null) %send %name has been disbanded.
