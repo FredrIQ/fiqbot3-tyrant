@@ -117,11 +117,21 @@ alias fiqbot.tyrant.cqcoordinates {
 }
 alias fiqbot.tyrant.db.add {
   var %table, %id, %name, %nextid
+  if (!%send) set -u0 %send echo -s
   %table = $1
   %id = $2
   if (!%id) return
-  %name = $remove($3-,\)
-  if (!%name) %name = ???
+  %name = $3-
+  if (%id !isnum) || (. isin %id) {
+    %send [DB error] Attempted to add a non-numeric ID! ID: %id :: Non-fixed name: %name :: Fixed name: $remove(%name,\)
+    %send [Socket info] Task: %task :: Msg: %msg :: Params: %params :: Parsed lines until error: %headers_completed :: Metadata: %metadata1 - %metadata2 - %metadata3 - %metadata4
+    halt
+  }
+  %name = $remove(%name,\)
+  if (!%name) {
+    %send [DB warning] Unknown name for ID: %id :: Caused by task: %task
+    %name = ???
+  }
   if (!$hget(%table,$+(name,%id))) {
     hadd %table $+(name,%id) %name
 
