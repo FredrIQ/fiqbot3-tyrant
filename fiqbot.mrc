@@ -2069,7 +2069,7 @@ on *:TEXT:*:*:{
       %player = $fiqbot.tyrant.db.select(users,$3)
       
       if ($gettok(%player,0,32) > 1) {
-        %send There are several players with this name. The most likely option has been selected. Options are: %db_user (query by ID to get those)
+        %send There are several players with this name. The most likely option has been selected. Options are: %player (query by ID to get those)
         %player = $gettok(%player,1,32)
       }
       if (!%player) {
