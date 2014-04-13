@@ -13,24 +13,24 @@ alias fiqbot.tyrant.init {
   }
   if ($exists($+($fiqbot.tyrant.directory,tables\users.fht))) {
     var %hload = fiqbot.tyrant.hload
-    %hload users
-    %hload userdata
-    %hload factions
-    %hload factiondata
-    %hload conquest
-    %hload targets
-    %hload wars
-    %hload wardata
+    %hload users 1000
+    %hload userdata 10000
+    %hload factions 10000
+    %hload factiondata 10000
+    %hload conquest 1000
+    %hload targets 500
+    %hload wars 1000
+    %hload wardata 10000
     return
   }
   if (!$hget(users)) hmake users 1000
-  if (!$hget(userdata)) hmake userdata 1000
-  if (!$hget(factions)) hmake factions 100
-  if (!$hget(factiondata)) hmake factiondata 1000
+  if (!$hget(userdata)) hmake userdata 10000
+  if (!$hget(factions)) hmake factions 10000
+  if (!$hget(factiondata)) hmake factiondata 10000
   if (!$hget(conquest)) hmake conquest 1000
-  if (!$hget(targets)) hmake targets 100
-  if (!$hget(wars)) hmake wars 10
-  if (!$hget(wardata)) hmake wardata 1000
+  if (!$hget(targets)) hmake targets 500
+  if (!$hget(wars)) hmake wars 1000
+  if (!$hget(wardata)) hmake wardata 10000
 }
 
 ;Helpers
@@ -320,8 +320,10 @@ alias -l fiqbot.tyrant.setsocketvars {
   }
 }
 alias fiqbot.tyrant.hload {
+  var %size = $2
+  if (!%size) %size = 1000
   if (!$hget($1)) {
-    hmake $1 1000
+    hmake $1 %size
   }
   var %dir = $+($fiqbot.tyrant.directory,tables\)
   var %file = $+(%dir,$1,.fht)
