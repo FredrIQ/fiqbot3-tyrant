@@ -1296,6 +1296,7 @@ on *:sockread:tyranttask*:{
     tokenize 44 %temp
     %counter = 0
     while ($7) || ($right(%temp,4) == }}}}) {
+      if (!$1) break
       %systemcheck = $noqt($gettok($2,1,58))
       echo -s debug: %systemcheck
       if (%systemcheck == system) {
