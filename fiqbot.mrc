@@ -1320,33 +1320,203 @@ on *:TEXT:*:*:{
     return
   }
   var %tile = $hget(invasions,$+(tile_,%user_faction))
-  var %i = 0
-  var %slots = 0
-  var %hp = 0
-  var %hp_total = 0
-  var %alive = 0
-  var %buffer
-  while (%slots < $hget(invasions,$+(slots,%tile))) {
-    inc %i
-    var %id = $+(_,%tile,_,%i)
-    if (!$hget(invasions,$+(active,%id))) continue
-    if (%i > 70) {
-      %send Error: Exceeded potential deck max!
-      break
-    }
 
-    if (!%buffer) %buffer = %i
-    else %buffer = %buffer $+ , %i
-    inc %slots
-    %hp = $hget(invasions,$+(hp,%id))
-    if (%hp) {
-      inc %alive
-      inc %hp_total %hp
+  var %maxhp = $hget(invasions,$+(maxhp,%tile))
+
+  var %x, %y, %cr, %bg, %owner_id, %owner_name, %protection_end, %attacker_id, %attacker_name, %attacker_start, %attacker_end, %timeleft, %hoursleft
+  %x = $hget(conquest,$+(x,%tile))
+  %y = $hget(conquest,$+(y,%tile))
+  %cr = $hget(conquest,$+(cr,%tile))
+  %bg = $hget(conquest,$+(bg,%tile))
+  %owner_id = $hget(conquest,$+(owner_id,%tile))
+  %owner_name = $hget(conquest,$+(owner_name,%tile))
+  %protection_end = $hget(conquest,$+(protection_end,%tile))
+  %attacker_id = $hget(conquest,$+(attacker_id,%tile))
+  %attacker_name = $hget(conquest,$+(attacker_name,%tile))
+  %attacker_start = $hget(conquest,$+(attacker_start,%tile))
+  %attacker_end = $hget(conquest,$+(attacker_end,%tile))
+  %timeleft = %attacker_end - $ctime
+  %hoursleft = %timeleft / 3600
+  if (%hoursleft < 0) %hoursleft = 0
+
+  if (!$3) {
+    var %i = 0
+    var %slots = 0
+    var %hp = 0
+    var %hp_total = 0
+    var %alive = 0
+    var %stuck
+    var %deck
+    var %alivebuffer
+    var %scoutbuffer
+    while (%slots < $hget(invasions,$+(slots,%tile))) {
+      inc %i
+      var %id = $+(_,%tile,_,%i)
+      if (!$hget(invasions,$+(active,%id))) continue
+      if (%i > 70) {
+        %send Error: Exceeded potential deck max!
+        break
+      }
+
+      inc %slots
+      %hp = $hget(invasions,$+(hp,%id))
+      %stuck = $hget(invasions,$+(stuck,%id))
+      %deck = $hget(invasions,$+(deck,%id))
+      if (%hp) {
+        inc %alive
+        inc %hp_total %hp
+        if (!%alivebuffer) %alivebuffer = %i
+        else %alivebuffer = %alivebuffer $+ , %i
+        if (%stuck) %alivebuffer = %alivebuffer (Stuck: %stuck $+ )
+        if (!%deck) {
+          if (!%scoutbuffer) %scoutbuffer = %i
+          else %scoutbuffer = %scoutbuffer $+ , %i
+        }
+      }
     }
+    var %maxhp_total = %slots * $hget(invasions,$+(maxhp,%tile))
+
+    var %alive_percent, %hp_percent, %duration_percent
+    %alive_percent = $calc($round($calc(%alive / %slots),2) * 100) $+ %
+    %hp_percent = $calc($round($calc(%hp_total / %maxhp_total),2) * 100) $+ %
+    %duration_percent = $calc($round($calc(%hoursleft / 6),2) * 100) $+ %
+
+    %hoursleft = $round(%hoursleft,1)
+
+    var %buffer
+    %buffer = $fiqbot.tyrant.cqcoordinates(%x,%y) $+(%attacker_name,-,%owner_name)
+    %buffer = %buffer :: Slots alive: $+(%alive,/,%slots) ( $+ %alive_percent $+ )
+    %buffer = %buffer :: HP: $+(%hp_total,/,%maxhp_total) ( $+ %hp_percent $+ )
+    %buffer = %buffer :: Hours left: $+(%hoursleft,/6) ( $+ %duration_percent $+ )
+    %buffer = %buffer :: $fiqbot.tyrant.duration(%timeleft) left
+    %send %buffer
+
+    %buffer = Slots alive: %alivebuffer
+    %buffer = %buffer :: The following slots needs scouting: %scoutbuffer
+    %send %buffer
+    return
   }
-  var %maxhp = %slots * $hget(invasions,$+(maxhp,%tile))
+  var %command = stats
+  if ($istok(claim unclaim stuck unstuck add set stats,$3,32)) {
+    %command = $3
+    tokenize 32 $1-2 $4-
+  }
+  if (!$3) && (un* !iswm %command) {
+    %send No slot given.
+    return
+  }
+  var %slot = $3
+  var %idx = $+(_,%tile,_,%slot)
+  var %idy = $+(_,%tile,_,$nick)
+  if ($3) && (!$hget(invasions,$+(active,%idx))) {
+    %send No such slot or unknown command: %slot (Commands are: claim, unclaim, stuck, unstuck, add, set)
+    return
+  }
 
-  %send Slots alive: $+(%alive,/,%slots) :: HP: $+(%hp_total,/,%maxhp)
+  var %hp, %commander, %commandername, %changed, %stuck, %stuck2, %nickstuck, %idn, %claim, %claim2, %nickclaim, %idc, %deck, %deckowner, %deckchanged, %deckchangednick, %deckvalid
+  %hp = $hget(invasions,$+(hp,%idx))
+  %commander = $hget(invasions,$+(commander,%idx))
+  %changed = 0
+  if ($hget(invasions,$+(changed,%idx))) %changed = $ctime - $hget(invasions,$+(changed,%idx))
+  %stuck = $hget(invasions,$+(stuck,%idx))
+  %nickstuck = $hget(invasions,$+(nstuck,%idy))
+  %idn = $+(_,%tile,_,%nickstuck)
+  %stuck2 = $hget(invasions,$+(stuck,%idn))
+  %claim = $hget(invasions,$+(claim,%idx))
+  %nickclaim = $hget(invasions,$+(nclaim,%idy))
+  %idc = $+(_,%tile,_,%nickclaim)
+  %claim2 = $hget(invasions,$+(claim,%idc))
+  %deck = $hget(invasions,$+(deck,%idx))
+  %deckowner = $hget(invasions,$+(deckowner,%idx))
+  %deckchanged = 0
+  if ($hget(invasions,$+(deckchanged,%idx))) %deckchanged = $ctime - $hget(invasions,$+(deckchanged,%idx))
+  %deckchangednick = $hget(invasions,$+(deckchangednick,%idx))
+  %deckvalid = $hget(invasions,$+(deckvalid,%idx))
+  %commandername = $hget(cards,$+(name,%commander))
+  if (%command == stats) {
+    var %buffer
+    %buffer = HP: $+(%hp,/,%maxhp)
+    %buffer = %buffer :: Commander: %commandername
+    if (%changed) %buffer = %buffer :: Commander last changed: $fiqbot.tyrant.duration(%changed) ago
+    %buffer = %buffer :: Deck: $iif(%deck,$v1,(not set))
+    if (%deck) {
+      if (%deckowner) %buffer = %buffer :: Owner: %deckowner
+      %buffer = %buffer :: Deck last changed by %deckchangednick $fiqbot.tyrant.duration(%deckchanged) ago
+    }
+    if (%stuck) %buffer = %buffer :: Stuck people: %stuck
+    if (%claim) %buffer = %buffer :: Claimed by: %claim
+    %send %buffer
+  }
+  elseif (stuck isin %command) {
+    if (%nickstuck) {
+      if (%idn != %idx) && (%command != unstuck) && (%nickstuck != %slot) {
+        %send (Removing your stuck status on %nickstuck $+ )
+        return
+      }
+      %stuck2 = $remtok(%stuck2,$nick,32)
+      hdel invasions $+(nstuck,%idy)
+      hadd invasions $+(stuck,%idn) %stuck2
+    }
+    elseif (%command == unstuck) {
+      %send You're not stuck.
+      return
+    }
+    if (%command == stuck) {
+      %stuck = $addtok(%stuck,$nick,32)
+      %stuck = $sorttok(%stuck,32,a)
+      hadd invasions $+(nstuck,%idy) %slot
+      hadd invasions $+(stuck,%idx) %stuck
+    }
+    %send Marked you as $lower(%command) on slot $iif(%command == unstuck,%nickstuck,%slot)
+    return
+  }
+  elseif (claim isin %command) {
+    if (%nickclaim) {
+      if (%idc != %idx) && (%command != unclaim) && (%nickclaim != %slot) {
+        %send (Removing your claim on %nickclaim $+ )
+        return
+      }
+      %claim2 = $remtok(%claim2,$nick,32)
+      hdel invasions $+(nclaim,%idy)
+      hadd invasions $+(claim,%idc) %claim2
+    }
+    elseif (%command == unclaim) {
+      %send You haven't claimed anything.
+      return
+    }
+    if (%command == claim) {
+      %claim = $addtok(%claim,$nick,32)
+      %claim = $sorttok(%claim,32,a)
+      hadd invasions $+(nclaim,%idy) %slot
+      hadd invasions $+(claim,%idx) %claim
+    }
+    %send $iif(%command == claim,Marked you as claiming,Removed your claim on) slot $iif(%command == unstuck,%nickstuck,%slot)
+    return
+  }
+  elseif (%command == set) {
+    ;FIXME: make =hash into a helper function to reuse functionality here, don't make ADD until then
+    %send (Decklist autodetection not implemented - will not autoadjust for now)
+    if ($right($4,1) == :) {
+      %deckowner = $left($4,-1)
+      tokenize 32 $1-3 $5-
+    }
+    if (!$4) {
+      %send Please enter deck content!
+      return
+    }
+    %deck = $4-
+    hadd invasions $+(deck,%idx) %deck
+    hadd invasions $+(deckowner,%idx) %deckowner
+    hadd invasions $+(deckchanged,%idx) $ctime
+    hadd invasions $+(deckchangednick,%idx) $nick
+
+    %buffer = Deck changed.
+    if (!%deckowner) %buffer = %buffer Owner is not set. You can set owner with SET %slot owner: content
+    %send %buffer
+  }
+  else {
+    %send Command unimplented
+  }
   return
 
   :ISON

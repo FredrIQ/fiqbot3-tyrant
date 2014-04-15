@@ -1285,7 +1285,7 @@ on *:sockread:tyranttask*:{
     fiqbot.tyrant.addfaction %id %name
     goto done
     :CHECKINVASION
-    var %tile, %slot, %id, %hp, %commander, %commandername, %oldhp, %oldcommander, %oldcommandername, %systemcheck, %counter, %maxhp
+    var %tile, %slot, %id, %idy, %hp, %commander, %stuck, %claim, %nick, %commandername, %oldhp, %oldcommander, %oldcommandername, %systemcheck, %counter, %maxhp
 
     var %fc = %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ]
     var %fc.send = msg %fc [INVASION]
@@ -1298,7 +1298,6 @@ on *:sockread:tyranttask*:{
     while ($7) || ($right(%temp,4) == }}}}) {
       if (!$1) break
       %systemcheck = $noqt($gettok($2,1,58))
-      echo -s debug: %systemcheck
       if (%systemcheck == system) {
         if (!$20) break
         inc %counter 19
@@ -1312,7 +1311,6 @@ on *:sockread:tyranttask*:{
         tokenize 44 $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
         continue
       }
-      echo -s debug: $1-6
       inc %counter 6
       %tile = $noqt($gettok($1,4,58))
       if (!%tile) %tile = $noqt($gettok($1,3,58))
@@ -1335,10 +1333,34 @@ on *:sockread:tyranttask*:{
       %oldhp = $hget(invasions,$+(hp,%id))
       %oldcommander = $hget(invasions,$+(commander,%id))
       %commandername = $hget(cards,$+(name,%commander))
-      %oldcommandername = $hget(cards,$+(name,%oldcommandername))
+      %oldcommandername = $hget(cards,$+(name,%oldcommander))
 
       if (%oldhp) && (!%hp) {
         %fc.send Slot %slot has been defeated!
+        %stuck = $hget(invasions,$+(stuck,%id))
+        %claim = $hget(invasions,$+(claim,%id))
+
+        if (%stuck) {
+          var %i = 0
+          while (%i < $gettok(%stuck,0,32)) {
+            inc %i
+            %nick = $gettok(%stuck,%i,32)
+            %idy = $+(_,%tile,_,%nick)
+            hdel invasions $+(nstuck,%idy)
+          }
+          %fc.send %stuck is now free!
+          hdel invasions $+(stuck,%id)
+        }
+        if (%claim) {
+          var %i = 0
+          while (%i < $gettok(%claim,0,32)) {
+            inc %i
+            %nick = $gettok(%claim,%i,32)
+            %idy = $+(_,%tile,_,%nick)
+            hdel invasions $+(nclaim,%idy)
+          }
+          hdel invasions $+(claim,%id)
+        }
       }
       if (%oldcommander != %commander) {
         %fc.send Slot %slot changed commander: %oldcommandername -> %commandername
