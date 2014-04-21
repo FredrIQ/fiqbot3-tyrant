@@ -1526,17 +1526,15 @@ on *:TEXT:*:*:{
   return
 
   :KILLSOCKETS
-  var %i = 1
-  while ($sock(*,%i)) {
-    sockclose $sock(*,%i)
-    inc %i
+  hfree socketdata
+  while ($sock(*,1)) {
+    sockclose $sock(*,1)
   }
   set -u5 %killsockets 1
   unset %needlock
   unset %fiqbot_tyrant_socklock
   unset %forcedcode*
   unset %bruteforcing*
-  hfree socketdata
   fiqbot.tyrant.init
 
   %send Socket handlers has been reset.

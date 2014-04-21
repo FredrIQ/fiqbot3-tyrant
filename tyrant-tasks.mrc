@@ -1970,7 +1970,10 @@ on *:sockclose:tyranttask*:{
   var -n %temp.f = %fm.message. [ $+ [ $+(%usertarget,.,%l.count) ] ]
   var -n %pos.f = $pos(%temp.f,"faction_id":",1)
   while (!%pos.e) {
-    if ($pos(%temp.f,%pos.nomessage,1)) return 
+    if ($pos(%temp.f,%pos.nomessage,1)) {
+      unset %fm.*
+      return 
+    }
     if (%fm.message. [ $+ [ $+(%usertarget,.,$calc(%l.count + 1)) ] ]) && ($len(%temp.f) <= 315) { var %temp.f = %temp.f $+ %fm.message. [ $+ [ $+(%usertarget,.,$calc(%l.count +1)) ] ] | inc %l.count } 
     var -n %pos.f = $pos(%temp.f,"faction_id":",1)
     var -n %pos.p = $pos(%temp.f,"post_id":",1)
