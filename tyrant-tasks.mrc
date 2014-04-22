@@ -43,6 +43,10 @@ alias fiqbot.tyrant.directory {
   if (!$exists($fiqbot.tyrant.directoryconfig)) return $+($scriptdir,tyrant\)
   return $fiqbot.tyrant.directoryconfig
 }
+alias fiqbot.tyrant.advancejson {
+  if ($2) return $right($1,- $+ $calc($len($gettok($1,1- $+ $2,44)) + 1))
+  return $1
+}
 alias fiqbot.tyrant.duration {
   var %duration = $replace($duration($1),wks,w $+ $chr(44),wk,w $+ $chr(44),days,d $+ $chr(44),day,d $+ $chr(44),hrs,h $+ $chr(44),mins,m $+ $chr(44),secs,s,hr,h $+ $chr(44),min,m $+ $chr(44),sec,s)
   if ($right(%duration,1) == ,) {
@@ -979,7 +983,7 @@ on *:sockread:tyranttask*:{
         if (%first == 2) {
           dec %first
           %counter = 1
-          tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ %counter,44)))
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
           continue
         }
         %id = $noqt($gettok($1,4,58))
@@ -995,7 +999,7 @@ on *:sockread:tyranttask*:{
         set -u0 %metadata1 0
       }
       if (%id_check != system_id) || (!%id) {
-        tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ %counter,44)))
+        tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
         continue
       }
       %x = $noqt($gettok($2,2,58))
@@ -1129,9 +1133,9 @@ on *:sockread:tyranttask*:{
       }
       
 
-      tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ %counter,44)))
+      tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
     }
-    %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+    %temp = $fiqbot.tyrant.advancejson(%temp,%counter)
     hadd socketdata $+(temp,%sockid) %temp
     goto done
     :CHECKFACTIONCHAT
@@ -1261,9 +1265,9 @@ on *:sockread:tyranttask*:{
         sockclose $sockname
         return
       }
-      tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ %counter,44)))
+      tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
     }
-    %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+    %temp = $fiqbot.tyrant.advancejson(%temp,%counter)
     set -u0 %metadata2 %members
     hadd socketdata $+(metadata2_,%sockid) %metadata2
     hadd socketdata $+(temp,%sockid) %temp
@@ -1308,7 +1312,7 @@ on *:sockread:tyranttask*:{
           %fc.send Max HP changed: $hget(invasions,$+(maxhp,%tile)) -> %maxhp
           hadd invasions $+(maxhp,%tile) %maxhp
         }
-        tokenize 44 $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+        tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
         continue
       }
       inc %counter 6
@@ -1317,7 +1321,7 @@ on *:sockread:tyranttask*:{
       %slot = $noqt($gettok($2,2,58))
       %hp = $noqt($gettok($3,2,58))
       %commander = $noqt($gettok($5,2,58))
-      tokenize 44 $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+      tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
 
       %id = $+(_,%tile,_,%slot)
       %maxhp = $hget(invasions,$+(maxhp,%tile))
@@ -1369,7 +1373,7 @@ on *:sockread:tyranttask*:{
       hadd invasions $+(hp,%id) %hp
       hadd invasions $+(commander,%id) %commander
     }
-    %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+    %temp = $fiqbot.tyrant.advancejson(%temp,%counter)
     hadd socketdata $+(temp,%sockid) %temp
     goto done
     :CHECKPLAYERNAME
@@ -1402,7 +1406,7 @@ on *:sockread:tyranttask*:{
       %name = $remove($noqt($gettok($2,2,58)),\)
       %namecheck = $noqt($gettok($2,1,58))
       if (%namecheck != name) {
-        tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ $calc(5 * %targetcounter),44)))
+        tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
         continue
       }
       if (!%name) {
@@ -1510,7 +1514,7 @@ on *:sockread:tyranttask*:{
       %loss.pts = $noqt($gettok($8,2,58))
       %win.def = $noqt($gettok($10,2,58))
       %loss.def = $noqt($remove($gettok($11,2,58),$chr(125),$chr(93)))
-      tokenize 44 $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+      tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
       %net = %win.pts - %loss.pts
       %fights = %win.off + %loss.off
       %timecheck = $noqt($gettok($12,1,58))
@@ -1578,7 +1582,7 @@ on *:sockread:tyranttask*:{
       hadd wardata $+(defstatlosspts,%idx) %defstat.losspts
       hadd wardata $+(defstatnet,%idx) %defstat.net
     }
-    %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+    %temp = $fiqbot.tyrant.advancejson(%temp,%counter)
     hadd socketdata $+(temp,%sockid) %temp
     goto done
 
@@ -1832,7 +1836,7 @@ on *:sockread:tyranttask*:{
       %end = Ended $fiqbot.tyrant.duration($calc(%ctime - ( $noqt($gettok($4,2,58)) + 3600 * 6 ) )) ago
       %atk = $noqt($gettok($7,2,58))
       %def = $noqt($gettok($8,2,58))
-      tokenize 44 $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+      tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
       if ((%metadata2 != no) && (%metadata2 != %opponent)) {
         continue
       }
@@ -1849,7 +1853,7 @@ on *:sockread:tyranttask*:{
       set -u0 %metadata3 0
       hadd socketdata $+(metadata3_,%sockid) 0
     }
-    %temp = $right(%temp,- $+ $calc($len($gettok(%temp,1- $+ %counter,44)) + 1))
+    %temp = $fiqbot.tyrant.advancejson(%temp,%counter)
     hadd socketdata $+(temp,%sockid) %temp
     if (!%metadata1) {
       sockclose $sockname
