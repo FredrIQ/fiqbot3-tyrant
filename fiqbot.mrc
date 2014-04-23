@@ -1,11 +1,11 @@
-FIQ-bot version 3.3-tyrant
-Totally rewritten
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;                   ;;;
 ;;;      ALIASES      ;;;
 ;;;                   ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;Build
+alias fiqbot.build return 77
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
@@ -800,7 +800,7 @@ on *:TEXT:*:*:{
   return
 
   :VERSION
-  %send FIQ-bot version $fiqbot.version :: Tyrant version: $fiqbot.tyrant.version
+  %send FIQ-bot version $fiqbot.version build $fiqbot.build :: Tyrant version: $fiqbot.tyrant.version
   return
 
   :VOICE
