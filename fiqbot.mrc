@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Build
-alias fiqbot.build return 78
+alias fiqbot.build return 79
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
@@ -205,7 +205,7 @@ alias initcmd {
   ;
   set %fiqbot_cmd_apiraw 11:<query> [parameters]:Performs a manual API query and returns the JSON response. Parameters require &parameter=foo syntax.
   set %fiqbot_cmd_card 1:<name or ID>:Gives information about a card.
-  set %fiqbot_cmd_clientcode 11:[new code]:Displays or set the assigned client code. If no code is set, or the code turns out to be incorrect, FIQ-bot will force a new code on a query by running "init".
+  set %fiqbot_cmd_clientcode 11:[account] [new code]:Displays or set the assigned client code. If no code is set, or the code turns out to be incorrect, FIQ-bot will force a new code on a query by running "init".
   set %fiqbot_cmd_conquestdebug 11:(nothing):Conquest debug log (output in status window)
   set %fiqbot_cmd_faction 1:[-l] <name or ID>:Displays some information about the faction.
   set %fiqbot_cmd_factionchat 3:[#channel] [on|off]:Turns faction chat announcing on or off for the current channel or [#channel].
@@ -931,8 +931,14 @@ on *:TEXT:*:*:{
     }
     return
   }
-  set -e %fiqbot_tyrant_clientcode1 $int($3)
-  %send Clientcode set to %fiqbot_tyrant_clientcode1
+  if (!$4) {
+    set %fiqbot_tyrant_clientcode1 $int($3)
+    %send Clientcode set to %fiqbot_tyrant_clientcode1
+  }
+  else {
+    set %fiqbot_tyrant_clientcode [ $+ [ $int($3) ] ] $int($4)
+    %send Clientcode for $int($3) set to %fiqbot_tyrant_clientcode [ $+ [ $int($3 ] ]
+  }
   return
 
   :CONQUESTDEBUG
