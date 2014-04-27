@@ -2112,7 +2112,7 @@ on *:sockclose:tyranttask*:{
   :SHOWWARLOG
   if (%metadata3) {
     var %buffer = No earlier wars
-    if (%metadata2 != no) %buffer = %buffer with %metadata3
+    if (%metadata2 != no) %buffer = %buffer with %metadata2
     %send %buffer
     return
   }
