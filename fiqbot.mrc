@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Build
-alias fiqbot.build return 80
+alias fiqbot.build return 81
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
@@ -222,7 +222,7 @@ alias initcmd {
     Parameters are [check] - check current settings globally, for the current channel and for yourself globally and for the current channel, [nick] - disable alerts for [nick], [global] - disable alerts completely, [highlights] - keep alerts, but don't mass highlight, [reset] - unset channel/global settings, [unset] - unset setting for you or [nick].¤ $&
     Use [#channel] to disable for a specific channel, either a specific nick or globally. Setting alert status for a specific nick which isn't you requires level 4+, setting channel alert status requires level 3+.
   set %fiqbot_cmd_ownedcards 3:<name or ID>:Exports given player's owned cards to ownedcards.txt format.
-  set %fiqbot_cmd_player 1:[#channel] <name or ID> [netscore days]:Displays some information about the player. Displays extra info if the player is, or used to be, member of a channel's faction (or [#channel]), and if this is the case, [netscore days] will adjust the amount of days back the netscore tracking goes.
+  set %fiqbot_cmd_player 1:[#channel] <name or ID> [netscore days]:Displays some information about the player. Displays extra info if the player is, or used to be, member of a channel's faction (or [#channel]), and if this is the case, [netscore days] will adjust the number of days back the netscore tracking goes.
   set %fiqbot_cmd_postdata 11:<query> [parameters]:Shows post data for given query.
   set %fiqbot_cmd_raid 1:[-l] <name or ID>:Displays raid hosted by given user. -l makes the raid key show up, if you have enough access (level 3).
   set %fiqbot_cmd_rebuild 11:(nothing):Rebuilds the card and raid database.
@@ -1941,7 +1941,7 @@ on *:TEXT:*:*:{
     tokenize 32 $1-2 $4-
   }
 
-  if ($3) {
+  if ($3 != $null) {
     %fid = $fiqbot.tyrant.db.select(factions,$3-)
     if (!%fid) && (($3 !isnum) || (. isin $3)) {
       %send There's no faction named $3- on the conquest board right now.
@@ -1953,7 +1953,7 @@ on *:TEXT:*:*:{
       %fid = $gettok(%fid,1,32)
     }
   }
-  if (!%fid) && (!%tile) {
+  if (%fid == $null) && (!%tile) {
     %send No faction specified.
     return
   }

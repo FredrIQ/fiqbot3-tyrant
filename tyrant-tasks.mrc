@@ -60,29 +60,6 @@ alias fiqbot.tyrant.account {
   if (!%usertarget) return 0
   return %fiqbot_tyrant_userid [ $+ [ %usertarget ] ]
 }
-alias fiqbot.tyrant.bg {
-  if ($1 == 1) return Time Surge
-  if ($1 == 2) return Copycat
-  if ($1 == 3) return Quicksilver
-  if ($1 == 4) return Decay
-  if ($1 == 5) return High Skies
-  if ($1 == 6) return Impenetrable
-  if ($1 == 7) return Invigorate
-  if ($1 == 8) return Clone Project
-  if ($1 == 9) return Friendly Fire
-  if ($1 == 10) return Genesis
-  if ($1 == 11) return Artillery Strike
-  if ($1 == 12) return Photon Shield
-  if ($1 == 13) return Decrepit
-  if ($1 == 14) return Forcefield
-  if ($1 == 15) return Chilling Toucħ
-  if ($1 == 16) return Clone Experiment
-  if ($1 == 17) return Toxic
-  if ($1 == 18) return Haunt
-  if ($1 == 19) return United Front
-  if ($1 == 20) return Harsh Conditions
-  return [Unknown battleground ID: $1 $+ $chr(93)
-}
 alias fiqbot.tyrant.cqcoordinates {
   var %x = $1, %y = $2
   if ($2 == $null) || ($2 == x) || ($2 == y) {
@@ -258,29 +235,8 @@ alias fiqbot.tyrant.energy {
   if ($prop == showcap) return $+(%current_use,/,%cap)
   return %current_use
 }
-alias fiqbot.tyrant.factionrank {
-  if ($1 == 0) return Applicant
-  if ($1 == 1) return Member
-  if ($1 == 2) return Officer
-  if ($1 == 3) return Leader
-  if ($1 == 4) return Warmaster
-  return $+(FactionRank<,$1,>)
-}
 alias fiqbot.tyrant.freelock {
   unset %fiqbot_tyrant_socklock
-}
-alias fiqbot.tyrant.gainedfp {
-  var %ownfp = $1, %fp = $2
-  if (%fp < $calc(%ownfp - 299)) return 1
-  elseif (%fp < $calc(%ownfp - 199)) return 2
-  elseif (%fp < $calc(%ownfp - 99)) return 3
-  elseif (%fp < $calc(%ownfp - 33)) return 4
-  elseif (%fp < $calc(%ownfp + 34)) return 5
-  elseif (%fp < $calc(%ownfp + 100)) return 6
-  elseif (%fp < $calc(%ownfp + 200)) return 7
-  elseif (%fp < $calc(%ownfp + 300)) return 8
-  elseif (%fp < $calc(%ownfp + 500)) return 9
-  else return 10
 }
 alias fiqbot.tyrant.hash {
   var %time_hash, %msg, %time, %userid
@@ -537,6 +493,14 @@ alias fiqbot.tyrant.checkwars {
   set -u0 %send echo -s warschecking:
   set -u0 %task checkwars
   set -u0 %msg getActiveFactionWars
+  fiqbot.tyrant.runsocket
+}
+alias fiqbot.tyrant.postmessage {
+  fiqbot.tyrant.login $1
+  if (!%send) set -u0 %send echo -s chatmsg:
+  set -u0 %task noop
+  set -u0 %msg postFactionMessage
+  set -u0 %params $+(text=,$2-)
   fiqbot.tyrant.runsocket
 }
 alias fiqbot.tyrant.raidinfo {
@@ -841,6 +805,12 @@ on *:sockread:tyranttask*:{
     return
   }
   if (!%send) set -u0 %send echo -s no-send:
+  if (%task == noop) {
+    set -u0 %temp $null
+    hadd socketdata $+(temp,%sockid) %temp
+    sockclose $sockname
+    return
+  }
   var %sockcount = 0
   while ($true) {
     inc %sockcount
@@ -2048,7 +2018,8 @@ on *:sockclose:tyranttask*:{
     if (!%waractivity) %waractivity_timer = (never)
 
     %ctime_days = $int($calc($ctime / 86400))
-    %active = %ctime_days - %active
+    if (%active == null) %active = (never)
+    else %active = %ctime_days - %active
     if (!%active) %active = today
     else %active = $+(%active,d ago)
 
@@ -2149,4 +2120,50 @@ on *:sockclose:tyranttask*:{
   if (!%scriptline) var %scriptline = error
   %send Line %line contains the following: %scriptline
   .reseterror
+}
+
+;Lists
+alias fiqbot.tyrant.bg {
+  if ($1 == 1) return Time Surge
+  if ($1 == 2) return Copycat
+  if ($1 == 3) return Quicksilver
+  if ($1 == 4) return Decay
+  if ($1 == 5) return High Skies
+  if ($1 == 6) return Impenetrable
+  if ($1 == 7) return Invigorate
+  if ($1 == 8) return Clone Project
+  if ($1 == 9) return Friendly Fire
+  if ($1 == 10) return Genesis
+  if ($1 == 11) return Artillery Strike
+  if ($1 == 12) return Photon Shield
+  if ($1 == 13) return Decrepit
+  if ($1 == 14) return Forcefield
+  if ($1 == 15) return Chilling Toucħ
+  if ($1 == 16) return Clone Experiment
+  if ($1 == 17) return Toxic
+  if ($1 == 18) return Haunt
+  if ($1 == 19) return United Front
+  if ($1 == 20) return Harsh Conditions
+  return [Unknown battleground ID: $1 $+ $chr(93)
+}
+alias fiqbot.tyrant.factionrank {
+  if ($1 == 0) return Applicant
+  if ($1 == 1) return Member
+  if ($1 == 2) return Officer
+  if ($1 == 3) return Leader
+  if ($1 == 4) return Warmaster
+  return $+(FactionRank<,$1,>)
+}
+alias fiqbot.tyrant.gainedfp {
+  var %ownfp = $1, %fp = $2
+  if (%fp < $calc(%ownfp - 299)) return 1
+  elseif (%fp < $calc(%ownfp - 199)) return 2
+  elseif (%fp < $calc(%ownfp - 99)) return 3
+  elseif (%fp < $calc(%ownfp - 33)) return 4
+  elseif (%fp < $calc(%ownfp + 34)) return 5
+  elseif (%fp < $calc(%ownfp + 100)) return 6
+  elseif (%fp < $calc(%ownfp + 200)) return 7
+  elseif (%fp < $calc(%ownfp + 300)) return 8
+  elseif (%fp < $calc(%ownfp + 500)) return 9
+  else return 10
 }
