@@ -2356,6 +2356,7 @@ alias fiqbot.tyrant.missionbyachievement {
   
   ;flashpoint conqueror + stuff needing 301+ (300 for now due to mission limit)
   if ($+(.,$1,.) isin .263.) return 300
+  return 1
 }
 alias fiqbot.tyrant.missionbyraid {
   if ($1 == 1) return 9
@@ -2380,6 +2381,7 @@ alias fiqbot.tyrant.missionbyraid {
   if ($1 == 20) return 300
   if ($1 == 21) return 251
   if ($1 == 22) return 231
+  return 1
 }
 alias fiqbot.tyrant.missionbyrep {
   if ($1 == 1) return 6
@@ -2405,4 +2407,5 @@ alias fiqbot.tyrant.missionbyrep {
   if ($1 == 21) return 230
   if ($1 == 22) return 253
   if ($1 == 23) return 277
+  return 1
 }
