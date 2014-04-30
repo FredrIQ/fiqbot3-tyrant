@@ -2167,3 +2167,242 @@ alias fiqbot.tyrant.gainedfp {
   elseif (%fp < $calc(%ownfp + 500)) return 9
   else return 10
 }
+alias fiqbot.tyrant.missionbyachievement {
+  ;Will give the lowest possible mission you're on right now, sorted on mission
+  ;Omits "x annihilator" since those depend on "x conqueror"
+  
+  ;completing these requires finishing a mission - i.e. at least you finished mission 1 (2-7 depend on 1)
+  if ($+(.,$1,.) isin .1.105.106.112.113.129.139.159.188.) return 2
+  
+  ;these can be done on 2+ but mission 2 only has 1 try, so return 3
+  if ($+(.,$1,.) isin .119.142.161.) return 3
+  
+  ;104 requires 3 flyers
+  if ($1 == 104) return 6
+  
+  ;100 requires 5+ assaults, 160 needs 5 successful valors
+  if ($+(.,$1,.) isin .100.160.) return 7
+  
+  ;those need harmful activation skills
+  if ($+(.,$1,.) isin .143.156.162.163.) return 8
+  
+  ;117 requires 2 structures
+  if ($1 == 117) return 9
+  
+  ;honored vanguard
+  if ($1 == 133) return 10
+  
+  ;speedy cyprion
+  if ($1 == 128) return 17
+  
+  ;honored champions
+  if ($1 == 134) return 18
+  
+  ;speedy blackmarsh
+  if ($1 == 127) return 23
+  
+  ;requires 24+
+  if ($+(.,$1,.) isin .121.144.145.) return 24
+  
+  ;requires 28+
+  if ($+(.,$1,.) isin .101.102.103.109.110.114.115.116.120.126.135.166.168.169.170.183.) return 28
+  
+  ;standard conqueror + true valor (28 has only 8 assaults)
+  if ($+(.,$1,.) isin .107.158.) return 29
+  
+  ;speedy red sands
+  if ($1 == 125) return 35
+  
+  ;honored protectorate
+  if ($1 == 136) return 38
+  
+  ;requires 41+
+  if ($+(.,$1,.) isin .111.118.122.124.137.155.157.) return 41
+  
+  ;enclave (typhon's) conqueror + nexus heavy hitters
+  if ($+(.,$1,.) isin .108.146.) return 42
+  
+  ;speedy sulfuris + honored forsaken
+  if ($+(.,$1,.) isin .147.150) return 53
+  
+  ;no-fly zone
+  if ($1 == 140) return 58
+  
+  ;speedy odeus
+  if ($1 == 148) return 59
+  
+  ;story mode - raider's unite
+  if ($1 == 141) return 64
+  
+  ;speedy blightlands + honored purge
+  if ($+(.,$1,.) isin .149.151.) return 66
+  
+  ;nexus conqueror + common attacker
+  if ($+(.,$1,.) isin .138.171.) return 67
+  
+  ;against the odds - 74
+  if ($1 == 165) return 74
+  
+  ;honored pact
+  if ($1 == 174) return 79
+  
+  ;against the odds - 80 + fight blood with blood (NoT unlocks at 80)
+  if ($+(.,$1,.) isin .167.198.) return 80
+  
+  ;speedy pits
+  if ($1 == 172) return 85
+  
+  ;their time will come
+  if ($1 == 179) return 87
+  
+  ;speedy core + honored order
+  if ($+(.,$1,.) isin .173.175.) return 90
+  
+  ;blight conqueror + stuff needing 91+
+  if ($+(.,$1,.) isin .164.181.182.184.185.189.) return 91
+  
+  ;gift of giving achievements needs winter solstice which is unlocked after beating 93
+  if ($+(.,$1,.) isin .220.221.) return 94
+  
+  ;honored retribution
+  if ($1 == 192) return 99
+  
+  ;honored credo
+  if ($1 == 193) return 109
+  
+  ;free tartarus + speedy cradle
+  if ($+(.,$1,.) isin .187.190.) return 113
+  
+  ;join the righteous
+  if ($1 == 186) return 116
+  
+  ;speedy valhalla + honored obliterators
+  if ($+(.,$1,.) isin .191.194.) return 119
+  
+  ;purity conqueror + stuff needing 120+
+  if ($+(.,$1,.) isin .180.202.203.204.205.207.208.210.219.) return 120
+  
+  ;honored heretic
+  if ($1 == 211) return 127
+  
+  ;honored chaos
+  if ($1 == 212) return 135
+  
+  ;blight support
+  if ($1 == 209) return 136
+  
+  ;speedy sands 2
+  if ($1 == 217) return 137
+  
+  ;raider revenge
+  if ($1 == 206) return 143
+  
+  ;honored beginnings + speedy wasteland 2
+  if ($+(.,$1,.) isin .213.218.) return 144
+  
+  ;homeworld conqueror + stuff needing 145+
+  if ($+(.,$1,.) isin .201.222.223.224.226.227.) return 145
+  
+  ;return to imperials
+  if ($1 == 228) return 162
+  
+  ;honored vicars + speedy vistik
+  if ($+(.,$1,.) isin .230.234.) return 163
+  
+  ;space wars
+  if ($1 == 236) return 164
+  
+  ;honored sovereign + speedy phobos
+  if ($+(.,$1,.) isin .229.235.) return 169
+  
+  ;phobos conqueror + stuff needing 170+
+  if ($+(.,$1,.) isin .225.237.) return 170
+  
+  ;phobos valor + honored hope
+  if ($+(.,$1,.) isin .238.239.) return 181
+  
+  ;stuff needing 182+
+  if ($+(.,$1,.) isin .242.244.) return 182
+  
+  ;honored purveyors + speedy lockeheart
+  if ($+(.,$1,.) isin .240.243.) return 204
+  
+  ;awakening conqueror + stuff needing 205+
+  if ($+(.,$1,.) isin .241.245.246.) return 205
+  
+  ;boss slayer
+  if ($1 == 260) return 220
+  
+  ;honored officers + speedy lockeheart 2
+  if ($+(.,$1,.) isin .247.249.) return 229
+  
+  ;terminus conqueror + stuff needing 230+
+  if ($+(.,$1,.) isin .248.250.251.) return 230
+  
+  ;honored visitors + speedy lockeheart 3
+  if ($+(.,$1,.) isin .252.254.) return 252
+  
+  ;occupation conqueror + stuff needing 253+
+  if ($+(.,$1,.) isin .253.255.256.) return 253
+  
+  ;honored abductors + speedy hive
+  if ($+(.,$1,.) isin .257.259.) return 276
+  
+  ;worldship conqueror + stuff needing 277+
+  if ($+(.,$1,.) isin .258.264.265.) return 277
+  
+  ;speedy fields + honored legions
+  if ($+(.,$1,.) isin .261.262.) return 300
+  
+  ;flashpoint conqueror + stuff needing 301+ (300 for now due to mission limit)
+  if ($+(.,$1,.) isin .263.) return 300
+}
+alias fiqbot.tyrant.missionbyraid {
+  if ($1 == 1) return 9
+  if ($1 == 2) return 42
+  if ($1 == 3) return 46
+  if ($1 == 4) return 49
+  if ($1 == 5) return 61
+  if ($1 == 6) return 67
+  if ($1 == 7) return 67
+  if ($1 == 8) return 70
+  if ($1 == 9) return 84
+  if ($1 == 10) return 91
+  if ($1 == 11) return 91
+  if ($1 == 12) return 94
+  if ($1 == 13) return 119
+  if ($1 == 14) return 120
+  if ($1 == 15) return 125
+  if ($1 == 16) return 132
+  if ($1 == 17) return 234
+  if ($1 == 18) return 253
+  if ($1 == 19) return 221
+  if ($1 == 20) return 300
+  if ($1 == 21) return 251
+  if ($1 == 22) return 231
+}
+alias fiqbot.tyrant.missionbyrep {
+  if ($1 == 1) return 6
+  if ($1 == 2) return 11
+  if ($1 == 3) return 19
+  if ($1 == 4) return 29
+  if ($1 == 5) return 31
+  if ($1 == 6) return 42
+  if ($1 == 7) return 54
+  if ($1 == 8) return 67
+  if ($1 == 9) return 80
+  if ($1 == 10) return 91
+  if ($1 == 11) return 100
+  if ($1 == 12) return 110
+  if ($1 == 13) return 120
+  if ($1 == 14) return 128
+  if ($1 == 15) return 136
+  if ($1 == 16) return 145
+  if ($1 == 17) return 152
+  if ($1 == 18) return 170
+  if ($1 == 19) return 182
+  if ($1 == 20) return 205
+  if ($1 == 21) return 230
+  if ($1 == 22) return 253
+  if ($1 == 23) return 277
+}
