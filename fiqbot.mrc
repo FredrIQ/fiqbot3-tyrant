@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Build
-alias fiqbot.build return 83
+alias fiqbot.build return 84
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
@@ -2170,7 +2170,7 @@ on *:TEXT:*:*:{
           return
         }
         %set = $hget(cards,$+(set,%id))
-        if ((%set != 1000) && ((%set > 11) || (%set < 1))) {
+        if ((%set != 1000) && ((%set > 12) || (%set < 1))) {
           %send %realname is part of a set which doesn't show up in the vault.
           return
         }
