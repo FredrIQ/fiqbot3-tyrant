@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Build
-alias fiqbot.build return 84
+alias fiqbot.build return 85
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))

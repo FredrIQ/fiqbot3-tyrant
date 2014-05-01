@@ -303,7 +303,6 @@ alias fiqbot.tyrant.hsave {
   if (!$hget($1)) return
   var %dir = $+($fiqbot.tyrant.directory,tables\)
   var %file = $+(%dir,$1,.fht)
-  .remove %file
   !hsave -oi $1 %file $1
 }
 
