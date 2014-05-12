@@ -679,6 +679,9 @@ alias fiqbot.tyrant.showownedcards {
 alias fiqbot.tyrant.showplayer {
   set -u0 %metadata1 1
   set -u0 %metadata2 $2
+  set -u0 %metadata3 init
+  set -u0 %metadata4 1
+  set -u0 %metadata5 normal
   set -u0 %user $1
   set -u0 %task showplayer
   set -u0 %msg getProfileData
@@ -1258,7 +1261,7 @@ on *:sockread:tyranttask*:{
     fiqbot.tyrant.addfaction %id %name
     goto done
     :CHECKINVASION
-    var %tile, %slot, %id, %idy, %hp, %commander, %stuck, %claim, %nick, %commandername, %oldhp, %oldcommander, %oldcommandername, %systemcheck, %counter, %maxhp
+    var %tile, %owner, %effectcheck, %slot, %id, %idy, %hp, %commander, %stuck, %claim, %nick, %commandername, %oldhp, %oldcommander, %oldcommandername, %systemcheck, %counter, %maxhp
 
     var %fc = %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ]
     var %fc.send = msg %fc [INVASION]
@@ -1275,7 +1278,11 @@ on *:sockread:tyranttask*:{
         if (!$20) break
         inc %counter 19
         %tile = $noqt($gettok($2,3,58))
-        %maxhp = $noqt($gettok($19,2,58))
+        %owner = $noqt($gettok($5,2,58))
+        if (%owner == null) dec %counter
+        %effectcheck = $noqt($gettok($ [ $+ [ $calc(%counter - 1) ] ],1,58))
+        if (%effectcheck != effect) dec %counter
+        %maxhp = $noqt($gettok($ [ $+ [ %counter ] ],2,58))
         if (!$hget(invasions,$+(maxhp,%tile))) hadd invasions $+(maxhp,%tile) %maxhp
         if ($hget(invasions,$+(maxhp,%tile)) != %maxhp) {
           %fc.send Max HP changed: $hget(invasions,$+(maxhp,%tile)) -> %maxhp
@@ -1307,7 +1314,7 @@ on *:sockread:tyranttask*:{
       %oldcommander = $hget(invasions,$+(commander,%id))
       %commandername = $hget(cards,$+(name,%commander))
       %oldcommandername = $hget(cards,$+(name,%oldcommander))
-
+      
       if (%oldhp) && (!%hp) {
         %fc.send Slot %slot has been defeated!
         %stuck = $hget(invasions,$+(stuck,%id))
@@ -1637,38 +1644,448 @@ on *:sockread:tyranttask*:{
     return
 
     :SHOWPLAYER
-    var %p_id = %user
-    if (%headers_completed == 1) {
-      tokenize 44 %temp
-      %p_name = $noqt($gettok($2,2,58))
-      %p_xp = $noqt($gettok($3,2,58))
-      %p_level = $noqt($gettok($4,2,58))
-      if (!%p_level) {
-        %send Specified player doesn't have a Tyrant account.
-        unset %fiqbot_tyrant_socklock
-        hdel socketdata $+(temp,%sockid)
+    var %check, %id, %name, %xp, %level, %elo, %arenapts, %tourneypts, %tourneywins, %tourneylosses, %achievements, %reputations, %mission, %state
+    var %card, %owned, %foil
+    var %achievement, %achievements, %achievementdone
+    var %reputation, %reputationprogress
+    var %item, %itemamount
+    var %raid, %raidhonor
+    var %factioncheck, %f.id, %f.name, %f.level, %f.points, %f.wins, %f.losses, %f.access, %f.lp
+    var %finish
+
+    %id = %user
+    %mission = $hget(userdata,$+(mission,%id))
+    if (!%mission) %mission = 1
+
+    %temp = %tempold $+ %temp
+    tokenize 44 %temp
+    %counter = 0
+    %check = $noqt($remove($gettok($1,1,58),$chr(123)))
+    if (%check == result) {
+      %send No such Tyrant account.
+      fiqbot.tyrant.freelock
+      hadd socketdata $+(temp,%sockid) $null
+      sockclose $sockname
+      return
+    }
+    while ($2) {
+      %state = %metadata3
+
+      %check = $noqt($remove($gettok($1,1,58),$chr(123)))
+      if (%state == init) {
+        if (%temp isnum) && (. !isin %temp) {
+          %send [Usercheck error] Throttled by tyrant API! Please try again.
+          fiqbot.tyrant.freelock
+          return
+        }
+        if (!$gettok($1,2,58)) break
+
+        if (!$10) break
+        inc %counter 9
+
+        %state = cards
+
+        %name = $noqt($gettok($2,2,58))
+        %xp = $noqt($gettok($3,2,58))
+        %level = $noqt($gettok($4,2,58))
+        %elo = $noqt($gettok($5,2,58))
+        %arenapts = $noqt($gettok($6,2,58))
+        %tourneypts = $noqt($gettok($7,2,58))
+        %tourneywins = $noqt($gettok($8,2,58))
+        %tourneylosses = $noqt($remove($gettok($9,2,58),$chr(125)))
+        %mission = 1
+
+        fiqbot.tyrant.freelock
+
+        fiqbot.tyrant.addplayer %id %name
+        var %updated = $hget(userdata,$+(updated,%id))
+        if (!%updated) {
+          %updated = $ctime
+        }
+        hadd userdata $+(mission,%id) 1
+        hadd userdata $+(achievements,%id) 0
+        hadd userdata $+(reputation,%id) 0
+        hadd userdata $+(faction,%id) 0
+        if (!$hget(usercards)) {
+          hmake usercards 5000
+        }
+        hadd usercards %id $null
+        hadd userdata $+(name,%id) %name
+        hadd userdata $+(xp,%id) %xp
+        hadd userdata $+(level,%id) %level
+        hadd userdata $+(elo,%id) %elo
+        hadd userdata $+(arenapts,%id) %arenapts
+        hadd userdata $+(tourneypts,%id) %tourneypts
+        hadd userdata $+(tourneywins,%id) %tourneywins
+        hadd userdata $+(tourneylosses,%id) %tourneylosses
+        set -u0 %metadata3 %state
+        hadd socketdata $+(metadata3_,%sockid) %metadata3
+      }
+      elseif (%state == cards) {
+        ;$4 rather than $3 to ensure that user_achievements will be parsed properly
+        if (!$4) break
+        if (%check == user_achievements) {
+          %state = achievements
+          set -u0 %metadata3 %state
+          hadd socketdata $+(metadata3_,%sockid) %metadata3
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+          continue
+        }
+        inc %counter 2
+        if (%check == user_cards) {
+          %card = $noqt($remove($gettok($1,2,58),$chr(123)))
+          %owned = $noqt($gettok($1,4,58))
+        }
+        else {
+          %card = %check
+          %owned = $noqt($gettok($1,3,58))
+        }
+        noop $hget(usercards,%id,&cardlist)
+        var %bcardpos = $bvar(&cardlist,0)
+        inc %bcardpos
+        var %card1a, %card2a, %card1b, %card2b %owned1, %owned2
+        %card1a = $int($calc(%card / 256))
+        %card2a = $calc(%card % 256)
+        %owned1 = $int($calc(%owned / 256))
+        %owned2 = $calc(%owned % 256)
+        if (%card > 10000) {
+          dec %card 10000
+          %card1a = $int($calc(%card / 256))
+          %card2a = $calc(%card % 256)
+          while (%card) {
+            %card1b = $bvar(&cardlist,%metadata4,1)
+            %card2b = $bvar(&cardlist,$calc(%metadata4 + 1),1)
+            if (%card1a > %card1b) || ((%card1a == %card1b) && (%card2a > %card2b)) {
+              inc %metadata4 5
+              hinc socketdata $+(metadata4_,%sockid) 5
+            }
+            elseif (%card1a == %card1b) && (%card2a == %card2b) {
+              bset &cardlist $calc(%metadata4 + 4) %owned2
+              %card = 0
+            }
+            elseif (%metadata4 > $bvar(&cardlist,0)) {
+              %card1a = $int($calc(%card / 256))
+              %card2a = $calc(%card % 256)
+              bset &cardlist %metadata4 %card1a %card2a 0 0 %owned2
+              %card = 0
+            }
+            else {
+              %card1a = $int($calc(%card / 256))
+              %card2a = $calc(%card % 256)
+
+              bcopy &cardlist_after 1 &cardlist %metadata4 $bvar(&cardlist,0)
+              bset &cardlist %metadata4 %card1a %card2a 0 0 %owned2
+              bcopy &cardlist $calc(%metadata4 + 5) &cardlist_after 1 $bvar(&cardlist_after,0)
+              %card = 0
+            }
+          }
+        }
+        else {
+          bset &cardlist %bcardpos %card1a %card2a %owned1 %owned2 0
+        }
+        hadd -b usercards %id &cardlist
+        set -u0 %metadata3 %state
+        hadd socketdata $+(metadata3_,%sockid) %metadata3
+      }
+      elseif (%state == achievements) {
+        if (!$4) break
+        if (%check == user_reputation) {
+          %state = reputation
+          set -u0 %metadata3 %state
+          hadd socketdata $+(metadata3_,%sockid) %metadata3
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+          continue
+        }
+        if ($gettok($1,2,58) == []) {
+          inc %counter
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+          continue
+        }
+        inc %counter 2
+        if (%check == user_achievements) {
+          %achievement = $noqt($remove($gettok($1,2,58),$chr(123)))
+        }
+        else {
+          %achievement = %check
+        }
+        %achievementdone = $noqt($remove($gettok($2,2,58),$chr(125)))
+        if (%achievementdone) {
+          %mission = $iif(%mission < $fiqbot.tyrant.missionbyachievement(%achievement),$v2,%mission)
+          hadd userdata $+(mission,%id) %mission
+          hinc userdata $+(achievements,%id)
+        }
+        set -u0 %metadata3 %state
+        hadd socketdata $+(metadata3_,%sockid) %metadata3
+      }
+      elseif (%state == reputation) {
+        if (!$4) break
+        if (%check == user_items) {
+          %state = items
+          set -u0 %metadata3 %state
+          hadd socketdata $+(metadata3_,%sockid) %metadata3
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+          continue
+        }
+        if ($gettok($1,2,58) == []) {
+          inc %counter
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+          continue
+        }
+        inc %counter 2
+        if (%check == user_reputation) {
+          %reputation = $noqt($remove($gettok($1,2,58),$chr(123)))
+          %reputationprogress = $noqt($gettok($1,4,58))
+        }
+        else {
+          %reputation = %check
+          %reputationprogress = $noqt($gettok($1,3,58))
+        }
+        if (%reputationprogress == 3) hinc userdata $+(reputation,%id)
+        %mission = $iif(%mission < $fiqbot.tyrant.missionbyrep(%reputation),$v2,%mission)
+        hadd userdata $+(mission,%id) %mission
+        set -u0 %metadata3 %state
+        hadd socketdata $+(metadata3_,%sockid) %metadata3
+      }
+      elseif (%state == items) {
+        if (!$3) break
+        if (%check == user_raid_honor) {
+          %state = raids
+          set -u0 %metadata3 %state
+          hadd socketdata $+(metadata3_,%sockid) %metadata3
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+          continue
+        }
+        if ($gettok($1,2,58) == []) {
+          inc %counter
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+          continue
+        }
+        inc %counter
+        if (%check == user_items) {
+          %item = $noqt($remove($gettok($1,2,58),$chr(123)))
+          %itemamount = $noqt($remove($gettok($1,3,58),$chr(125)))
+          }
+        set -u0 %metadata3 %state
+        hadd socketdata $+(metadata3_,%sockid) %metadata3
+      }
+      elseif (%state == raids) {
+        if (!$3) break
+        if (%check == user_replays) {
+          %state = replays
+          set -u0 %metadata3 %state
+          hadd socketdata $+(metadata3_,%sockid) %metadata3
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+          continue
+        }
+        if ($gettok($1,3,58) == []}) {
+          inc %counter
+          tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+          continue
+        }
+        inc %counter
+        if (%check == user_raid_honor) {
+          %raid = $noqt($remove($gettok($1,3,58),$chr(123)))
+          %raidhonor = $noqt($remove($gettok($1,4,58),$chr(125)))
+        }
+        else {
+          %raid = %check
+          %raidhonor = $noqt($remove($gettok($1,2,58),$chr(125)))
+        }
+        %mission = $iif(%mission < $fiqbot.tyrant.missionbyraid(%raid),$v2,%mission)
+        hadd userdata $+(mission,%id) %mission
+        set -u0 %metadata3 %state
+        hadd socketdata $+(metadata3_,%sockid) %metadata3
+      }
+      elseif (%state == replays) {
+        ;content is too big here, needs custom behaviour
+        %factioncheck = $pos(%temp,"faction_data")
+        %finish = $pos(%temp,"version")
+        if (!%factioncheck) && (!%finish) {
+          %temp = $left(%temp,500)
+          hadd socketdata $+(temp,%sockid) %temp
+          goto done
+        }
+        if (!%factioncheck) {
+          %state = finish
+          set -u0 %metadata3 %state
+          hadd socketdata $+(metadata3_,%sockid) %metadata3
+          continue
+        }
+        dec %factioncheck 1
+        %counter = 0
+        %temp = $right(%temp,$+(-,%factioncheck))
+        hadd socketdata $+(temp,%sockid) %temp
+        tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
+        %state = faction
+        set -u0 %metadata3 %state
+        hadd socketdata $+(metadata3_,%sockid) %metadata3
+        continue
+      }
+      elseif (%state == faction) {
+        if (!$9) break
+        %state = finish
+
+        %f.id = $noqt($gettok($1,3,58))
+        %f.name = $noqt($gettok($2,2,58))
+        %f.level = $noqt($gettok($3,2,58))
+        %f.points = $noqt($gettok($4,2,58))
+        %f.wins = $noqt($gettok($5,2,58))
+        %f.losses = $noqt($gettok($6,2,58))
+        %f.access = $noqt($gettok($7,2,58))
+        %f.lp = $noqt($remove($gettok($8,2,58),$chr(125)))
+
+        if (%f.id) {
+          hadd userdata $+(faction,%id) %f.id
+          hadd userdata $+(factionrank,%id) %f.access
+          hadd userdata $+(lp,%id) %f.lp
+
+          hadd factiondata $+(name,%f.id) %f.name
+          hadd factiondata $+(level,%f.id) %f.level
+          hadd factiondata $+(points,%f.id) %f.points
+          hadd factiondata $+(wins,%f.id) %f.wins
+          hadd factiondata $+(losses,%f.id) %f.losses
+        }
+
+        set -u0 %metadata3 %state
+        hadd socketdata $+(metadata3_,%sockid) %metadata3)
+        continue
+      }
+      elseif (%state == finish) {
+        %name = $hget(userdata,$+(name,%id))
+        %xp = $hget(userdata,$+(xp,%id))
+        %level = $hget(userdata,$+(level,%id))
+        %elo = $hget(userdata,$+(elo,%id))
+        %arenapts = $hget(userdata,$+(arenapts,%id))
+        %tourneypts = $hget(userdata,$+(tourneypts,%id))
+        %tourneywins = $hget(userdata,$+(tourneywins,%id))
+        %tourneylosses = $hget(userdata,$+(tourneylosses,%id))
+
+        %achievements = $hget(userdata,$+(achievements,%id))
+        %reputation = $hget(userdata,$+(reputation,%id))
+
+        %f.id = $hget(userdata,$+(faction,%id))
+        %f.access = $hget(userdata,$+(factionrank,%id))
+        %f.lp = $hget(userdata,$+(lp,%id))
+
+        %f.name = $hget(factiondata,$+(name,%f.id))
+        %f.level = $hget(factiondata,$+(level,%f.id))
+        %f.points = $hget(factiondata,$+(points,%f.id))
+        %f.wins = $hget(factiondata,$+(wins,%f.id))
+        %f.losses = $hget(factiondata,$+(losses,%f.id))
+
+        var %buffer = %name
+        %buffer = %buffer (Level %level $+ , %xp $+ XP)
+
+        if (%f.id) {
+          %buffer = %buffer :: $fiqbot.tyrant.factionrank(%f.access) of %f.name
+          %buffer = %buffer (Level %f.level $+ , %f.points $+ FP, $+(%f.wins,/,%f.losses) W/L)
+          %buffer = %buffer with %f.lp $+ LP
+        }
+        else {
+          %buffer = %buffer :: Not in a faction
+        }
+
+        %buffer = %buffer :: Arena: %elo elo, %arenapts points
+        %buffer = %buffer :: Tournament rating: %tourneypts $+ , $+(%tourneywins,/,%tourneylosses) W/L
+        %buffer = %buffer :: Achievements: $+(%achievements,/,$fiqbot.tyrant.achievements)
+        %buffer = %buffer :: Reputation: $+(%reputation,/,$fiqbot.tyrant.reputation)
+        %buffer = %buffer :: Mission: %mission
+
+        %send %buffer
+        var %user_faction = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
+        var %idx = $+(_,%user_faction,_,%id)
+        var %usercheck_faction = $hget(factiondata,$+(usercheck,%user_faction))
+        var %usercheck_player = $hget(userdata,$+(usercheck,%idx))
+        if (%usercheck_player) {
+          var %rank, %active, %ctime_days, %lp, %cq_claimed, %items, %member_until, %stamina, %waractivity, %waractivity_timer
+          %rank = $hget(userdata,$+(rank,%idx))
+          %active = $hget(userdata,$+(active,%idx))
+          %lp = $hget(userdata,$+(lp,%idx))
+          %cq_claimed = $hget(userdata,$+(cq_claimed,%idx))
+          %member_until = $hget(userdata,$+(member_until,%idx))
+          %stamina = $hget(userdata,$+(stamina,%id))
+          %waractivity = $hget(userdata,$+(waractivity,%id))
+          %waractivity_timer = $fiqbot.tyrant.duration($calc($ctime - %waractivity)) ago
+          if (!%waractivity) %waractivity_timer = (never)
+
+          %ctime_days = $int($calc($ctime / 86400))
+          if (%active == null) %active = (never)
+          else {
+            %active = %ctime_days - %active
+            if (!%active) %active = today
+            else %active = $+(%active,d ago)
+          }
+
+          if (%usercheck_faction == %usercheck_player) {
+            %buffer = Stamina: $fiqbot.tyrant.energy(%stamina,300).showcap
+            %buffer = %buffer :: Last active: %active (last war fight was %waractivity_timer $+ )
+            %buffer = %buffer :: Tokens last claimed: $fiqbot.tyrant.duration($calc($ctime - %cq_claimed)) ago
+          }
+          else {
+            %buffer = Former $fiqbot.tyrant.factionrank(%rank) of $hget(factions,$+(name,%user_faction))
+            %buffer = %buffer :: LP: %lp
+            %buffer = %buffer :: Left faction: $fiqbot.tyrant.duration($calc($ctime - %member_until)) ago
+          }
+          %send %buffer
+          if (%usercheck_faction == %usercheck_player) {
+            var %win.off, %win.def, %win.pts, %loss.off, %loss.def, %loss.pts, %fights, %net
+            var %defstat.win, %defstat.winpts, %defstat.loss, %defstat.losspts, %defstat.net
+            var %days = %metadata2
+            var %daystime = $calc($ctime - %days * 86400)
+            var %i = 1
+            while (%i < $hget(wars,$+(nextid,%user_faction))) {
+              var %war = $hget(wars,$+(id_,%user_faction,_,%i))
+              if ($hget(wardata,$+(started,%war)) < %daystime) {
+                inc %i
+                continue
+              }
+              %idx = $+(_,%war,_,%id)
+              %win.off = $calc(%win.off + $hget(wardata,$+(winoff,%idx)))
+              %win.def = $calc(%win.def + $hget(wardata,$+(windef,%idx)))
+              %win.pts = $calc(%win.pts + $hget(wardata,$+(winpts,%idx)))
+              %loss.off = $calc(%loss.off + $hget(wardata,$+(lossoff,%idx)))
+              %loss.def = $calc(%loss.def + $hget(wardata,$+(lossdef,%idx)))
+              %loss.pts = $calc(%loss.pts + $hget(wardata,$+(losspts,%idx)))
+              %defstat.win = $calc(%defstat.win + $hget(wardata,$+(defstatwin,%idx)))
+              %defstat.winpts = $calc(%defstat.winpts + $hget(wardata,$+(defstatwinpts,%idx)))
+              %defstat.loss = $calc(%defstat.loss + $hget(wardata,$+(defstatloss,%idx)))
+              %defstat.losspts = $calc(%defstat.losspts + $hget(wardata,$+(defstatlosspts,%idx)))
+              inc %i
+            }
+            %fights = %win.off + %loss.off
+            %net = %win.pts - %loss.pts
+            %defstat.net = %defstat.winpts - %defstat.losspts
+            if (- !isin %net) %net = + $+ %net
+            if (- !isin %defstat.net) %defstat.net = + $+ %defstat.net
+            %buffer = Netscore over $+(%days,d)
+            if (!%win.pts) && (!%loss.pts) %buffer = %buffer :: No data
+            else {
+              %buffer = %buffer :: %fights fights total
+              %buffer = %buffer :: Offensive: $+(%win.off,/,%loss.off) W/L
+              %buffer = %buffer :: Defensive: $+(%win.def,/,%loss.def) W/L
+              %buffer = %buffer :: Netscore: $+(%win.pts,-,%loss.pts) ( $+ %net $+ )
+              if (!%defstat.winpts) && (!%defstat.losspts) var %defstat = No data
+              else var %defstat = $+(%defstat.winpts,-,%defstat.losspts) ( $+ %defstat.net $+ ), accounted for $+(%defstat.win,/,%defstat.loss) defense W/L
+              %buffer = %buffer :: Defensive netscore: %defstat
+            }
+            %send %buffer
+          }
+        }
+        hadd socketdata $+(temp,%sockid) $null
         sockclose $sockname
         return
       }
-      fiqbot.tyrant.addplayer %p_id %p_name
-      if (!$hget(userdata)) {
-        hmake userdata 10000
+      else {
+        hadd socketdata $+(temp,%sockid) $null
+        sockclose $sockname
+        return
       }
-      var %p_updated = $hget(userdata,$+(updated,%p_id))
-      if (!%p_updated) %p_updated = 0
-      if (%p_updated < $calc($ctime - 7200)) hadd userdata $+(updated,%p_id) $ctime
-      set -u0 %metadata1 %p_updated
-      hadd socketdata $+(metadata1_,%sockid) %metadata1
-      %p_elo = $noqt($gettok($5,2,58))
-      %p_arena = $noqt($gettok($6,2,58))
-      %p_tournament = $noqt($gettok($7,2,58))
-      %p_wins = $noqt($gettok($8,2,58))
-      %p_losses = $noqt($left($gettok($9,2,58),-1))
+      tokenize 44 $fiqbot.tyrant.advancejson(%temp,%counter)
     }
-    if (%metadata1 < $calc($ctime - 7200)) {
-      noop
-    }
+    %temp = $fiqbot.tyrant.advancejson(%temp,%counter)
+    hadd socketdata $+(temp,%sockid) %temp
     goto done
+    
     :SHOWRAID
     var %userid, %raidid, %start, %health, %users, %joinkey, %duration
     var %end, %ended, %raidname, %raidhp, %raidusers, %raidtime
@@ -1838,7 +2255,6 @@ on *:sockread:tyranttask*:{
     var %chan = %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ]
     var %noalert_settings = %fiqbot_tyrant_noalert_ [ $+ [ %chan ] ]
     if (!%noalert_settings) %noalert_settings = %fiqbot_tyrant_noalert
-    if (%noalert_settings == global) && (%task == checkwars) return
     var %user_faction = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
     %first = $true
     while ($10) {
@@ -1891,7 +2307,7 @@ on *:sockread:tyranttask*:{
           if (!%buffer) %buffer = :: Attention:
           var %buffer = %buffer $nick(%fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ],%i)
         }
-        msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] New war started! %id :: $+(%friend,-,%opponent) :: $+(%atk,-,%def) ( $+ %diff $+ ) :: %end %buffer
+        if (%noalert_settings != global) msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] New war started! %id :: $+(%friend,-,%opponent) :: $+(%atk,-,%def) ( $+ %diff $+ ) :: %end %buffer
       }
       tokenize 44 $right(%temp,- $+ $len($gettok(%temp,1- $+ $calc(15 * %warcounter),44)))
     }
@@ -1958,125 +2374,11 @@ on *:sockclose:tyranttask*:{
     ;List of positions
     ;faction: $mid(%temp.f,$calc(%pos.f +14),$calc(%pos.p - %pos.f -16)) Postid: $mid(%temp.f,$calc(%pos.p +11),$calc(%pos.m - %pos.p -13)) message: $remove($mid(%temp.f,$calc(%pos.m +11),$calc(%pos.t - %pos.m -13)),\) time: $mid(%temp.f,$calc(%pos.t +8),$calc(%pos.u - %pos.t -10)) userid: $iif($hget(users,name $+ $mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12)))),$ifmatch,$mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12)))))
     var -n %x = [FACTIONCHAT] $iif($hget(users,name $+ $mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12)))),$ifmatch,$mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12))))) $+ $chr(58) $remove($mid(%temp.f,$calc(%pos.m +11),$calc(%pos.t - %pos.m -13)),\) 
-    if (last_post= isin %params) && (%pos.f) msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] %x 
+    if (last_post= isin %params) && (%pos.f) && (%fiqbot_tyrant_chat [ $+ [ %usertarget ] ]) msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] %x 
     if (%pos.eol) var %temp.f = $remove(%temp.f,$left(%temp.f,$calc(%pos.eol +3)))
   }
   if ($mid(%temp.f,$calc(%pos.p +11),$calc(%pos.m - %pos.p -13)) isnum) set %last.post.id. $+ %usertarget $mid(%temp.f,$calc(%pos.p +11),$calc(%pos.m - %pos.p -13))
   unset %fm.*
-  return
-  
-  :SHOWPLAYER
-  var %p_id = %user
-  set -l %buffer %p_name (Level %p_level $+ , $+(%p_xp,XP) $+ )
-  %temp = %tempold $+ %temp
-  if (faction isin %temp) {
-    tokenize 44 %temp
-    var %i = 1
-    while ($noqt($gettok($ [ $+ [ %i ] ],1,58)) != faction_data) inc %i
-    var %f_id, %f_name, %f_level, %f_fp, %f_wins, %f_losses, %f_access, %f_lp
-    %f_id = $noqt($gettok($ [ $+ [ $calc(%i + 0) ] ],3,58))
-    %f_name = $noqt($gettok($ [ $+ [ $calc(%i + 1) ] ],2,58))
-    if (!%f_name) %f_name = ???
-    %f_level = $noqt($gettok($ [ $+ [ $calc(%i + 2) ] ],2,58))
-    %f_fp = $noqt($gettok($ [ $+ [ $calc(%i + 3) ] ],2,58))
-    %f_wins = $noqt($gettok($ [ $+ [ $calc(%i + 4) ] ],2,58))
-    %f_losses = $noqt($gettok($ [ $+ [ $calc(%i + 5) ] ],2,58))
-    %f_access = $noqt($gettok($ [ $+ [ $calc(%i + 6) ] ],2,58))
-    %f_lp = $noqt($remove($gettok($ [ $+ [ $calc(%i + 7) ] ],2,58),},"))
-    %f_access = $fiqbot.tyrant.factionrank(%f_access)
-    %f_lp = $left(%f_lp,-2)
-    if (%f_lp >= 0) {
-      %buffer = %buffer :: %f_access of %f_name (Level %f_level $+ , %f_fp $+ FP, $+(%f_wins,/,%f_losses) W/L) with %f_lp $+ LP
-
-      fiqbot.tyrant.addfaction %f_id %f_name
-    }
-    unset %task
-  }
-  else {
-    %buffer = %buffer :: Not in a faction
-  }
-  %buffer = %buffer :: Arena: %p_elo elo, %p_arena points :: Tournament rating: %p_tournament $+ , $+(%p_wins,/,%p_losses) W/L
-  var %updated = (never)
-  if (%metadata1 > 1) var %updated = $fiqbot.tyrant.duration($calc($ctime - %metadata1)) ago
-  if (%access >= 3) %buffer = %buffer :: Latest update: %updated
-  %send %buffer
-  var %user_faction = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
-  var %idx = $+(_,%user_faction,_,%p_id)
-  var %usercheck_faction = $hget(factiondata,$+(usercheck,%user_faction))
-  var %usercheck_player = $hget(userdata,$+(usercheck,%idx))
-  if (%usercheck_player) {
-    var %rank, %active, %ctime_days, %lp, %cq_claimed, %items, %member_until, %stamina, %waractivity, %waractivity_timer
-    %rank = $hget(userdata,$+(rank,%idx))
-    %active = $hget(userdata,$+(active,%idx))
-    %lp = $hget(userdata,$+(lp,%idx))
-    %cq_claimed = $hget(userdata,$+(cq_claimed,%idx))
-    %member_until = $hget(userdata,$+(member_until,%idx))
-    %stamina = $hget(userdata,$+(stamina,%p_id))
-    %waractivity = $hget(userdata,$+(waractivity,%p_id))
-    %waractivity_timer = $fiqbot.tyrant.duration($calc($ctime - %waractivity)) ago
-    if (!%waractivity) %waractivity_timer = (never)
-
-    %ctime_days = $int($calc($ctime / 86400))
-    if (%active == null) %active = (never)
-    else %active = %ctime_days - %active
-    if (!%active) %active = today
-    else %active = $+(%active,d ago)
-
-    if (%usercheck_faction == %usercheck_player) {
-      %buffer = Stamina: $fiqbot.tyrant.energy(%stamina,300).showcap
-      %buffer = %buffer :: Last active: %active (last war fight was %waractivity_timer $+ )
-      %buffer = %buffer :: Tokens last claimed: $fiqbot.tyrant.duration($calc($ctime - %cq_claimed)) ago
-    }
-    else {
-      %buffer = Former $fiqbot.tyrant.factionrank(%rank) of $hget(factions,$+(name,%user_faction))
-      %buffer = %buffer :: LP: %lp
-      %buffer = %buffer :: Left faction: $fiqbot.tyrant.duration($calc($ctime - %member_until)) ago
-    }
-    %send %buffer
-    if (%usercheck_faction == %usercheck_player) {
-      var %win.off, %win.def, %win.pts, %loss.off, %loss.def, %loss.pts, %fights, %net
-      var %defstat.win, %defstat.winpts, %defstat.loss, %defstat.losspts, %defstat.net
-      var %days = %metadata2
-      var %daystime = $calc($ctime - %days * 86400)
-      var %i = 1
-      while (%i < $hget(wars,$+(nextid,%user_faction))) {
-        var %war = $hget(wars,$+(id_,%user_faction,_,%i))
-        if ($hget(wardata,$+(started,%war)) < %daystime) {
-          inc %i
-          continue
-        }
-        %idx = $+(_,%war,_,%p_id)
-        %win.off = $calc(%win.off + $hget(wardata,$+(winoff,%idx)))
-        %win.def = $calc(%win.def + $hget(wardata,$+(windef,%idx)))
-        %win.pts = $calc(%win.pts + $hget(wardata,$+(winpts,%idx)))
-        %loss.off = $calc(%loss.off + $hget(wardata,$+(lossoff,%idx)))
-        %loss.def = $calc(%loss.def + $hget(wardata,$+(lossdef,%idx)))
-        %loss.pts = $calc(%loss.pts + $hget(wardata,$+(losspts,%idx)))
-        %defstat.win = $calc(%defstat.win + $hget(wardata,$+(defstatwin,%idx)))
-        %defstat.winpts = $calc(%defstat.winpts + $hget(wardata,$+(defstatwinpts,%idx)))
-        %defstat.loss = $calc(%defstat.loss + $hget(wardata,$+(defstatloss,%idx)))
-        %defstat.losspts = $calc(%defstat.losspts + $hget(wardata,$+(defstatlosspts,%idx)))
-        inc %i
-      }
-      %fights = %win.off + %loss.off
-      %net = %win.pts - %loss.pts
-      %defstat.net = %defstat.winpts - %defstat.losspts
-      if (- !isin %net) %net = + $+ %net
-      if (- !isin %defstat.net) %defstat.net = + $+ %defstat.net
-      %buffer = Netscore over $+(%days,d)
-      if (!%win.pts) && (!%loss.pts) %buffer = %buffer :: No data
-      else {
-        %buffer = %buffer :: %fights fights total
-        %buffer = %buffer :: Offensive: $+(%win.off,/,%loss.off) W/L
-        %buffer = %buffer :: Defensive: $+(%win.def,/,%loss.def) W/L
-        %buffer = %buffer :: Netscore: $+(%win.pts,-,%loss.pts) ( $+ %net $+ )
-        if (!%defstat.winpts) && (!%defstat.losspts) var %defstat = No data
-        else var %defstat = $+(%defstat.winpts,-,%defstat.losspts) ( $+ %defstat.net $+ ), accounted for $+(%defstat.win,/,%defstat.loss) defense W/L
-        %buffer = %buffer :: Defensive netscore: %defstat
-      }
-      %send %buffer
-    }
-  }
   return
 
   :SHOWWARLOG
@@ -2101,6 +2403,7 @@ on *:sockclose:tyranttask*:{
   :SHOWID
   :SHOWONLINESTATUS
   :SHOWOWNEDCARDS
+  :SHOWPLAYER
   :SHOWRAID
   :SHOWVAULT
   :SHOWWARS

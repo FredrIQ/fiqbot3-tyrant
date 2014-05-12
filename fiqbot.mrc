@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Build
-alias fiqbot.build return 85
+alias fiqbot.build return 86
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
@@ -1339,6 +1339,7 @@ on *:TEXT:*:*:{
   %bg = $hget(conquest,$+(bg,%tile))
   %owner_id = $hget(conquest,$+(owner_id,%tile))
   %owner_name = $hget(conquest,$+(owner_name,%tile))
+  if (%owner_id == 0) %owner_name = AI
   %protection_end = $hget(conquest,$+(protection_end,%tile))
   %attacker_id = $hget(conquest,$+(attacker_id,%tile))
   %attacker_name = $hget(conquest,$+(attacker_name,%tile))
@@ -1442,6 +1443,7 @@ on *:TEXT:*:*:{
   %deckchangednick = $hget(invasions,$+(deckchangednick,%idx))
   %deckvalid = $hget(invasions,$+(deckvalid,%idx))
   %commandername = $hget(cards,$+(name,%commander))
+  if ($hget(cards,$+(id,$remove(%commandername,$chr(32)))) != %commander) %commandername = $+(%commandername,[,%commander,])
   if (%command == stats) {
     var %buffer
     %buffer = HP: $+(%hp,/,%maxhp)
@@ -1493,6 +1495,7 @@ on *:TEXT:*:*:{
       %send You haven't claimed anything.
       return
     }
+    
     if (%command == claim) {
       %claim = $addtok(%claim,$nick,32)
       %claim = $sorttok(%claim,32,a)
@@ -1635,9 +1638,69 @@ on *:TEXT:*:*:{
   return
 
   :OWNEDCARDS
+  var %time = $ticks
   if (!$3) { fiqbot.usage $2 $chan | return }
-  fiqbot.tyrant.login 1
-  fiqbot.tyrant.showownedcards $3
+  var %all = $false
+  if ($3 == -a) {
+    %all = $true
+    tokenize 32 $1-2 $4-
+  }
+  if (!$hget(usercards)) {
+    %send Please query the player first with PLAYER
+    return
+  }
+
+  var %user = $fiqbot.tyrant.db.select(users,$3)
+  if ($gettok(%user,0,32) > 1) {
+    %send There are several players with this name. The most likely option has been selected. Options are: %user (query by ID to get those)
+    %player = $gettok(%user,1,32)
+  }
+  if (!%user) {
+    %user = $3
+  }
+  noop $hget(usercards,%user,&cardlist)
+  if (!$bvar(&cardlist,0)) {
+    %send Please query the player first with PLAYER
+    return
+  }
+  var %inpos, %outpos, %bytes, %card, %name, %owned
+  %inpos = 1
+
+  while (%inpos < $bvar(&cardlist,0)) {
+    tokenize 32 $bvar(&cardlist,%inpos,5)
+    %card = $2
+    if ($1) inc %card $calc($1 * 256)
+    %name = $hget(cards,$+(name,%card))
+    %owned = $4
+    if ($3) inc %owned $calc($3 * 256)
+    if ($5) inc %owned $5
+    if (%owned) || (%all) {
+      %outpos = $bvar(&cardlist_out,0)
+      if (!%outpos) %outpos = 0
+      inc %outpos
+      bset -t &cardlist_out %outpos $+([,%card,]) %name ( $+ %owned $+ )
+      %outpos = $bvar(&cardlist_out,0)
+      inc %outpos
+      bset &cardlist_out %outpos 13 10
+    }
+    inc %inpos 5
+  }
+  .remove ownedcards.txt
+  bwrite ownedcards.txt 0 -1 &cardlist_out
+  var %name = $rand(1,16777216)
+  
+  var %directory = $+(/tyrant/ownedcards_,%name,.txt)
+  
+  /*
+  FIXME: make an uploader, currently this relies on local setup!
+  
+  rename ownedcards.txt $+(Z:/srv/http,%directory)
+  */
+  
+  var %site = http://home.fiq.se
+  
+  %time = $ticks - %time
+  %send %time ms :: Card list can be viewed at $+(%site,%directory)
   return
 
   :PLAYER
