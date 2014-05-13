@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Build
-alias fiqbot.build return 86
+alias fiqbot.build return 87
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
@@ -1653,7 +1653,7 @@ on *:TEXT:*:*:{
   var %user = $fiqbot.tyrant.db.select(users,$3)
   if ($gettok(%user,0,32) > 1) {
     %send There are several players with this name. The most likely option has been selected. Options are: %user (query by ID to get those)
-    %player = $gettok(%user,1,32)
+    %user = $gettok(%user,1,32)
   }
   if (!%user) {
     %user = $3
