@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Build
-alias fiqbot.build return 87
+alias fiqbot.build return 88
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
@@ -221,7 +221,7 @@ alias initcmd {
   set %fiqbot_cmd_noalert 1:[check|[#channel] [nick [unset]|global|highlights|unset|reset]]:Disables war alert highlighting.¤ $&
     Parameters are [check] - check current settings globally, for the current channel and for yourself globally and for the current channel, [nick] - disable alerts for [nick], [global] - disable alerts completely, [highlights] - keep alerts, but don't mass highlight, [reset] - unset channel/global settings, [unset] - unset setting for you or [nick].¤ $&
     Use [#channel] to disable for a specific channel, either a specific nick or globally. Setting alert status for a specific nick which isn't you requires level 4+, setting channel alert status requires level 3+.
-  set %fiqbot_cmd_ownedcards 3:<name or ID>:Exports given player's owned cards to ownedcards.txt format.
+  set %fiqbot_cmd_ownedcards 3:[-a] <name or ID>:Exports given player's owned cards to ownedcards.txt format. Use -a to list all cards that the user ever owned (this does NOT mean "list all cards in tyrant"). Unless you have level 5+, you can only check cards of factionmates.
   set %fiqbot_cmd_player 1:[#channel] <name or ID> [netscore days]:Displays some information about the player. Displays extra info if the player is, or used to be, member of a channel's faction (or [#channel]), and if this is the case, [netscore days] will adjust the number of days back the netscore tracking goes.
   set %fiqbot_cmd_postdata 11:<query> [parameters]:Shows post data for given query.
   set %fiqbot_cmd_raid 1:[-l] <name or ID>:Displays raid hosted by given user. -l makes the raid key show up, if you have enough access (level 3).
@@ -1662,6 +1662,18 @@ on *:TEXT:*:*:{
   if (!$bvar(&cardlist,0)) {
     %send Please query the player first with PLAYER
     return
+  }
+  
+  ;check access
+  if (%access < 5) {
+    ;only factionmates, this is checked by verifying that the specific user is in the associated faction channel.
+    var %faction = $hget(userdata,$+(faction,%user))
+    var %ownfactionuser = %fiqbot_tyrant_faccount [ $+ [ %faction ] ]
+    var %factionchannel = %fiqbot_tyrant_factionchannel_ [ $+ [ %ownfactionuser ] ]
+    if (!%factionchannel) || ($nick !ison %factionchannel) {
+      %send Specified player is not a factionmate, isn't assigned to a faction known to FIQ-bot or you're not in the assigned FIQ-bot faction channel and you're not level 5.
+      return
+    }
   }
   var %inpos, %outpos, %bytes, %card, %name, %owned
   %inpos = 1
