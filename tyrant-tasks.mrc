@@ -297,13 +297,13 @@ alias fiqbot.tyrant.hload {
   }
   var %dir = $+($fiqbot.tyrant.directory,tables\)
   var %file = $+(%dir,$1,.fht)
-  if ($exists(%file)) !hload -i $1 %file $1
+  if ($exists(%file)) !hload $1 %file $1
 }
 alias fiqbot.tyrant.hsave {
   if (!$hget($1)) return
   var %dir = $+($fiqbot.tyrant.directory,tables\)
   var %file = $+(%dir,$1,.fht)
-  !hsave -oi $1 %file $1
+  !hsave $1 %file $1
 }
 
 ;Continous commands
@@ -912,7 +912,6 @@ on *:sockread:tyranttask*:{
     set -u0 %params $+(%metadata4,%id)
     set -u0 %needlock %metadata5
     set -u0 %delay %metadata6
-    set -u0 %metadata1 $json(%temp,username)
     var %i = 0
     while (%metadata [ $+ [ $calc(%i + 7) ] ]) {
       inc %i
@@ -2374,7 +2373,7 @@ on *:sockclose:tyranttask*:{
     ;List of positions
     ;faction: $mid(%temp.f,$calc(%pos.f +14),$calc(%pos.p - %pos.f -16)) Postid: $mid(%temp.f,$calc(%pos.p +11),$calc(%pos.m - %pos.p -13)) message: $remove($mid(%temp.f,$calc(%pos.m +11),$calc(%pos.t - %pos.m -13)),\) time: $mid(%temp.f,$calc(%pos.t +8),$calc(%pos.u - %pos.t -10)) userid: $iif($hget(users,name $+ $mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12)))),$ifmatch,$mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12)))))
     var -n %x = [FACTIONCHAT] $iif($hget(users,name $+ $mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12)))),$ifmatch,$mid(%temp.f,$calc(%pos.u +11),$iif(%pos.eol,$calc(%pos.eol - %pos.u - 11),$calc(%pos.e - %pos.u -12))))) $+ $chr(58) $remove($mid(%temp.f,$calc(%pos.m +11),$calc(%pos.t - %pos.m -13)),\) 
-    if (last_post= isin %params) && (%pos.f) && (%fiqbot_tyrant_chat [ $+ [ %usertarget ] ]) msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] %x 
+    if (last_post= isin %params) && (%pos.f) && (%fiqbot_tyrant_chat_ [ $+ [ %usertarget ] ]) msg %fiqbot_tyrant_factionchannel_ [ $+ [ %usertarget ] ] %x 
     if (%pos.eol) var %temp.f = $remove(%temp.f,$left(%temp.f,$calc(%pos.eol +3)))
   }
   if ($mid(%temp.f,$calc(%pos.p +11),$calc(%pos.m - %pos.p -13)) isnum) set %last.post.id. $+ %usertarget $mid(%temp.f,$calc(%pos.p +11),$calc(%pos.m - %pos.p -13))
