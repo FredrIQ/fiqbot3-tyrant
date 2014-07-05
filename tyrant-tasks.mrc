@@ -297,13 +297,13 @@ alias fiqbot.tyrant.hload {
   }
   var %dir = $+($fiqbot.tyrant.directory,tables\)
   var %file = $+(%dir,$1,.fht)
-  if ($exists(%file)) !hload $1 %file $1
+  if ($exists(%file)) !hload -b $1 %file $1
 }
 alias fiqbot.tyrant.hsave {
   if (!$hget($1)) return
   var %dir = $+($fiqbot.tyrant.directory,tables\)
   var %file = $+(%dir,$1,.fht)
-  !hsave -o $1 %file $1
+  !hsave -ob $1 %file $1
 }
 
 ;Continous commands
