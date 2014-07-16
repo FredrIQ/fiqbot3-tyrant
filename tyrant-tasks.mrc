@@ -1069,6 +1069,8 @@ on *:sockread:tyranttask*:{
             }
             if (%fc.newattacker) {
               msg %fc.newattacker [CONQUEST] Attacking $fiqbot.tyrant.cqcoordinates(%x,%y) owned by $iif(%owner_name,%owner_name,AI)
+              if (!$hget(invasions)) hmake invasions 100
+              hadd invasions tile_ $+ %attacker_id %id
             }
           }
           if (%h.attacker != %owner_id) && (%h.attacker) {
@@ -1078,6 +1080,11 @@ on *:sockread:tyranttask*:{
             }
             if (%fc.attacker) {
               msg %fc.attacker [CONQUEST] Failed to conquer $fiqbot.tyrant.cqcoordinates(%x,%y) from %h.ownername
+              if ($hget(invasions,$+(slots,%id))) {
+                hdel invasions $+(slots,%id)
+                hdel -w invasions *_ $+ %id $+ _*
+                hdel invasions tile_ $+ %attacker_id
+              }
             }
           }
           hadd conquest $+(attacker_id,%id) %attacker_id
