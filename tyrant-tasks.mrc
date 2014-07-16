@@ -346,8 +346,8 @@ alias fiqbot.tyrant.updatefactioninfo {
       ;Member tracking
       fiqbot.tyrant.checkfactionmembers %i
       
-      ;Unfinished, for CQ assist
-      ;fiqbot.tyrant.checkinvasion %i
+      ;CQ assist
+      fiqbot.tyrant.checkinvasion %i
       
       ;For updating of target lists
       fiqbot.tyrant.checktargets %i

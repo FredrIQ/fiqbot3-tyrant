@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Build
-alias fiqbot.build return 92
+alias fiqbot.build return 94
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
@@ -1898,7 +1898,7 @@ on *:TEXT:*:*:{
     set %fiqbot_tyrant_ignoretargets [ $+ [ %usertarget ] ] %ignores
     %send Target ignores has been set.
     return
-  }
+    }
   var %fid = %fiqbot_tyrant_fid [ $+ [ %usertarget ] ]
   var %showupcoming = $false
   var %hours = 0
