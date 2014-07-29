@@ -1045,6 +1045,11 @@ on *:sockread:tyranttask*:{
             }
             if (%fc.newowner) {
               msg %fc.newowner [CONQUEST] Successfully conquered $fiqbot.tyrant.cqcoordinates(%x,%y) from $iif(%h.ownername,%h.ownername,AI)
+              if ($hget(invasions,$+(slots,%id))) {
+                hdel invasions $+(slots,%id)
+                hdel -w invasions *_ $+ %id $+ _*
+                hdel invasions tile_ $+ %owner_id
+              }
             }
           }
           else {
