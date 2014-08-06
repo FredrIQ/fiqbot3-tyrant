@@ -99,7 +99,7 @@ on *:SOCKOPEN:tyrantraids:{
 }  
 on *:SOCKREAD:tyrantcards:{
   if ($sockerr > 0) return
-  var %ignore, %unit, %id, %type, %name, %attack, %health, %cost, %rarity, %faction, %set, %skillid, %skillname, %skillcount, %skillall, %skilltarget, %skillonplay, %skillondeath, %skillonattack, %skillonkill, %unique, %hidden
+  var %ignore, %unit, %id, %type, %name, %attack, %picture, %health, %cost, %rarity, %faction, %set, %skillid, %skillname, %skillcount, %skillall, %skilltarget, %skillonplay, %skillondeath, %skillonattack, %skillonkill, %unique, %hidden
   while ($true) {
     sockread %temp
     if (<!-- isin %temp) {
@@ -148,6 +148,10 @@ on *:SOCKREAD:tyrantcards:{
       elseif (<attack> isin %temp) {
         %attack = $remove(%temp,<attack>,</attack>)
         hadd cards $+(attack,%id) %attack
+      }
+      elseif (<picture> isin %temp) {
+        %picture = $remove(%temp,<picture>,</picture>)
+        hadd cards $+(picture,%id) %picture
       }
       elseif (<health> isin %temp) {
         %health = $remove(%temp,<health>,</health>)
