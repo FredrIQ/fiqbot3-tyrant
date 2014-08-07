@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Build
-alias fiqbot.build return 96
+alias fiqbot.build return 97
 
 ;Other's stuff
 alias urlencode return $regsubex($1-,/\G(.)/g,$iif(($prop && \1 !isalnum) || !$prop,$chr(37) $+ $base($asc(\1),10,16),\1))
@@ -1332,7 +1332,7 @@ on *:TEXT:*:*:{
 
   var %maxhp = $hget(invasions,$+(maxhp,%tile))
 
-  var %x, %y, %cr, %bg, %owner_id, %owner_name, %protection_end, %attacker_id, %attacker_name, %attacker_start, %attacker_end, %timeleft, %hoursleft
+  var %x, %y, %cr, %bg, %owner_id, %owner_name, %protection_end, %attacker_id, %attacker_name, %attacker_start, %attacker_end, %timeleft, %hoursleft, %buffer
   %x = $hget(conquest,$+(x,%tile))
   %y = $hget(conquest,$+(y,%tile))
   %cr = $hget(conquest,$+(cr,%tile))
