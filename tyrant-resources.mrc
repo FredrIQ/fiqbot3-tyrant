@@ -12,12 +12,12 @@ alias fiqbot.tyrant.downloadresources {
   ;cards.xml
   if (!$hget(cards)) hmake cards 1000
   if ($sock(tyrantcards)) sockclose tyrantcards
-  sockopen tyrantcards kg-dev.tyrantonline.com 80
+  sockopen tyrantcards dev.tyrantonline.com 80
 
   ;raids.xml
   if (!$hget(raids)) hmake raids 10
   if ($sock(tyrantraids)) sockclose tyrantraids
-  sockopen tyrantraids kg-dev.tyrantonline.com 80
+  sockopen tyrantraids dev.tyrantonline.com 80
 }
 alias fiqbot.tyrant.downloadxml {
   if (!%send) set -u0 %send echo -s downloadxml:
@@ -130,7 +130,7 @@ on *:SOCKREAD:tyrantcards:{
     set %temp $remove(%temp,	)
     if (%unit) && (!%ignore) {
       if (<id> isin %temp) {
-        %id = $remove(%temp,<id>,</id>)
+        %id = $remove(%temp,<id>,</id>,$chr(32))
       }
       elseif (<name> isin %temp) {
         %name = $remove(%temp,<name>,</name>)
@@ -235,7 +235,7 @@ on *:SOCKREAD:tyrantcards:{
         if (%skillondeath) %str = %str on Death
         if (%skillonattack) %str = %str on Attacked
         if (%skillonkill) %str = %str on Kill
-        hadd cards $+(skill,%id,_,%skillid) %str
+        hadd cards $+(skill,%id,_,%skillid) $remove(%str,/>)
         %str = $null
         inc %skillid
       }
